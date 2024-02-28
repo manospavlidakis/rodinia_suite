@@ -1,0 +1,11 @@
+*.perf
+result.txt
+gaussian/gaussian
+gaussian/run
+hotspot/hotspot
+lavaMD/lavaMD
+lavaMD/main.o
+nn/nn
+nw/nw
+particlefilter/particlefilter_float
+pathfinder/pathfinder
