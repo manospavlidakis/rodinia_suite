@@ -1,0 +1,2 @@
+./hotspot 1024 4 10000 ../../data/hotspot/temp_1024 /mnt/vol0/data/hotspot/power_1024 nat_result.txt
+
