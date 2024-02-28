@@ -1,0 +1,2 @@
+#!/bin/bash
+./bfs /archive/users/manospavl/benchmarks/rodinia_3.1/data/bfs/inputGen/graph1k.txt

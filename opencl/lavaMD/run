@@ -1,0 +1,5 @@
+#!/bin/bash
+#if you want to change bitstream version open main.c 
+#and check for "version". Then do make
+
+./lavaMD -boxes1d 20

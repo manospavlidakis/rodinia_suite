@@ -1,0 +1,1 @@
+./hotspot 512 4000 100000 /archive/users/manospavl/benchmarks/rodinia_3.1/data/hotspot/temp_512 /archive/users/manospavl/benchmarks/rodinia_3.1/data/hotspot/power_512 output.txt 0 v0
