@@ -1,8 +1,6 @@
 #!/bin/bash
 path=$1
 file=$2
-echo "filename: "${file}
-echo "path: "${path}
 ./hotspot 1024 4000 100000000 ../../data/hotspot/temp_1024 ../../data/hotspot/power_1024 output &> 1024_100M_${file}
 ./hotspot 1024 4000 10000000 ../../data/hotspot/temp_1024 ../../data/hotspot/power_1024 output &> 1024_10M_${file}
 ./hotspot 1024 4000 1000000 ../../data/hotspot/temp_1024 ../../data/hotspot/power_1024 output &> 1024_1M_${file}
