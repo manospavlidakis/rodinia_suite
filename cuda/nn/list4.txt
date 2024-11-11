@@ -1,1 +1,1 @@
-../../data/nn/cane64k.db
+../../data/nn/cane4_0.db
