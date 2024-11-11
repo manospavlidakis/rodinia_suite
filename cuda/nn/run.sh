@@ -1,12 +1,10 @@
 #!/bin/bash
 path=$1
 file=$2
-echo "filename: "${file}
-echo "path: "${path}
-time taskset -c 4-7 ./nn list64k.txt -r 5 -lat 30 -lng 90 -q &> ${path}/64k_${file}
-time taskset -c 4-7 ./nn list128k.txt -r 5 -lat 30 -lng 90 -q &> ${path}/128k_${file}
-time taskset -c 4-7 ./nn list256k.txt -r 5 -lat 30 -lng 90 -q &> ${path}/256k_${file}
-time taskset -c 4-7 ./nn list512k.txt -r 5 -lat 30 -lng 90 -q &> ${path}/512k_${file}
-time taskset -c 4-7 ./nn list1024k.txt -r 5 -lat 30 -lng 90 -q &> ${path}/1024k_${file}
-time taskset -c 4-7 ./nn list2048k.txt -r 5 -lat 30 -lng 90 -q &> ${path}/2048k_${file}
-time taskset -c 4-7 ./nn list4096k.txt -r 5 -lat 30 -lng 90 -q &> ${path}/4096k_${file}
+./nn list64k.txt -r 5 -lat 30 -lng 90 -q &> 64k_${file}
+./nn list128k.txt -r 5 -lat 30 -lng 90 -q &> 128k_${file}
+./nn list256k.txt -r 5 -lat 30 -lng 90 -q &> 256k_${file}
+./nn list512k.txt -r 5 -lat 30 -lng 90 -q &> 512k_${file}
+./nn list1024k.txt -r 5 -lat 30 -lng 90 -q &> 1024k_${file}
+./nn list2048k.txt -r 5 -lat 30 -lng 90 -q &> 2048k_${file}
+./nn list4096k.txt -r 5 -lat 30 -lng 90 -q &> 4096k_${file}

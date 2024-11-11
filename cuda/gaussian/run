@@ -1,2 +1,0 @@
-#./gaussian -f /mnt/vol0/data/gaussian/matrix4096.txt
-./gaussian -s 2048
