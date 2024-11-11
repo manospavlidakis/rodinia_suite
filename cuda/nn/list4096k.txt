@@ -1,1 +1,0 @@
-/mnt/vol0/data/nn/cane4096k.db
