@@ -1,4 +1,4 @@
-include ../../common/make.config
+#include ../../common/make.config
 
 CUDA_INSTALL_PATH ?= /usr/local/cuda
 ifeq ($(d),debug)
