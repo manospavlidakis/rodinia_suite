@@ -1,9 +1,7 @@
 #!/bin/bash
 path=$1
 file=$2
-./nw 512 10 &> 512_${file}
-./nw 1024 10 &> 1024_${file}
-./nw 2048 10 &> 2048_${file}
-./nw 4096 10 &> 4096_${file}
-./nw 8192 10 &> 8192_${file}
-./nw 16384 10 &> 16384_${file}
+for ((iter=1; iter<=5;iter++))
+do
+./nw 8192 10 &> 8192_${iter}_${file}
+done

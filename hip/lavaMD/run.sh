@@ -1,10 +1,7 @@
 #!/bin/bash
 path=$1
 file=$2
-echo "filename: "${file}
-echo "path: "${path}
-#time taskset -c 20-23 ./lavaMD -boxes1d 10 &> ${path}/10_${file}
-time taskset -c 20-23 ./lavaMD -boxes1d 20 &> ${path}/20_${file}
-time taskset -c 20-23 ./lavaMD -boxes1d 30 &> ${path}/30_${file}
-time taskset -c 20-23 ./lavaMD -boxes1d 40 &> ${path}/40_${file}
-#time taskset -c 20-23 ./lavaMD -boxes1d 50 &> ${path}/50_${file}
+for ((iter=1; iter<=5;iter++))
+do
+./lavaMD -boxes1d 20 &> 20_${iter}_${file}
+done

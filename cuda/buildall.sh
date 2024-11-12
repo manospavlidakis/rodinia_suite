@@ -1,13 +1,20 @@
 #!/bin/bash
-#CUDA_DIR=/opt/cuda
-echo "Hereeeeeeeeeeeeeeeee!!!"
-CUDA_DIR=$1
+SPECTRAL=$3
+
+if [ "$SPECTRAL" = true ]; then
+    CUDA_DIR=$1
+    SM_VERSION=$2
+    # Code that runs if FLAG is true
+    echo "Run with Spectral"
+else
+    CUDA_DIR=/opt/cuda
+    SM_VERSION="86"
+    # Code that runs if FLAG is not true
+    echo "FLAG is not defined"
+fi
 echo "CUDA dir: ${CUDA_DIR}"
 CUDA_LIB_DIR=$CUDA_DIR/lib64
-SM_VERSION=$2
 echo "SM version : ${SM_VERSION}"
-#numeric_part="${SM_VERSION#*_}"
-#echo "$numeric_part"
 
 GENCODE_FLAGS="-gencode arch=compute_${SM_VERSION},code=sm_${SM_VERSION}"
 CXXFLAGS="-std=c++11 -m64 -O3"
