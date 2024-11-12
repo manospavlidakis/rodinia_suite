@@ -7,7 +7,7 @@ if [ "$SPECTRAL" = true ]; then
     # Code that runs if FLAG is true
     echo "Run with Spectral"
 else
-    CUDA_DIR=/opt/cuda
+    CUDA_DIR=/opt/cuda-11.7
     SM_VERSION="86"
     # Code that runs if FLAG is not true
     echo "FLAG is not defined"
