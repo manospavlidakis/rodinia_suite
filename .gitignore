@@ -11,3 +11,4 @@
 */nw/nw
 */particlefilter/particlefilter_float
 */pathfinder/pathfinder
+hip/lavaMD/kernel/kernel_gpu_cuda_wrapper.o
