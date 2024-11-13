@@ -16,4 +16,4 @@ release: $(SRC)
 	$(CC) $(CXXFLAGS) $(KERNEL_DIM) $(SRC) $(GENCODE_FLAGS) -o $(EXE) -I$(INCLUDE) -L$(CUDA_LIB_DIR) 
 
 clean: $(SRC)
-	rm -f $(EXE) $(EXE).linkinfo result.txt
+	rm -f $(EXE) $(EXE).linkinfo result.txt *.csv 1024_* *.txt output

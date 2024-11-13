@@ -6,4 +6,4 @@ all: float
 float: $(SRC)
 	hipcc $(CXXFLAGS) -O3 $(SRC) -o $(EXE)
 clean:
-	rm particlefilter_naive particlefilter_float
+	rm particlefilter_naive particlefilter_float *.csv *.txt

@@ -25,4 +25,4 @@ debugenum: $(SRC)
 	$(CC) ${KERNEL_DIM} -g -deviceemu $(SRC) -o $(EXE) -I$(INCLUDE) -L$(CUDA_LIB_DIR) 
 
 clean: $(SRC)
-	rm -f $(EXE) $(EXE).linkinfo result.txt
+	rm -f $(EXE) $(EXE).linkinfo *.txt  *.csv 8192_*

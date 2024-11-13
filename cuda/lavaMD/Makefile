@@ -55,4 +55,5 @@ clean:
 		./kernel/*.o \
 		./util/device/*.o \
 		*.txt\
-		lavaMD
+		lavaMD\
+		*.csv

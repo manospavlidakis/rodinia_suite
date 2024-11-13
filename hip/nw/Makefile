@@ -7,4 +7,4 @@ release: $(SRC)
 	hipcc $(CXXFLAGS) -O3 $(SRC) -o $(EXE) 
 
 clean: 
-	rm -f *.o *.txt $(EXE)
+	rm -f *.o *.txt $(EXE) *.csv 8192_*

@@ -6,4 +6,4 @@ release: $(SRC)
 	hipcc $(CXXFLAGS) -O3 $(SRC) -o $(EXE) 
 
 clean:
-	rm -f *.o $(EXE) 
+	rm -f *.o $(EXE) 2048_*_nn.csv nat_result.txt

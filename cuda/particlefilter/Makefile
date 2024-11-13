@@ -16,4 +16,4 @@ all: float
 float: $(SRC)
 	$(CC) $(CXXFLAGS) $(SRC) $(GENCODE_FLAGS) -o $(EXE) -I$(INCLUDE) -L$(CUDA_LIB_DIR)
 clean:
-	rm particlefilter_naive particlefilter_float
+	rm particlefilter_naive particlefilter_float *.csv *.txt

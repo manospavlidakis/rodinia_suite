@@ -20,4 +20,4 @@ main.o: main.h main.cpp ./kernel/kernel_gpu_cuda_wrapper.h ./kernel/kernel_gpu_c
 
 # delete all object and executable files
 clean:
-	rm -f *.o ./kernel/*.o lavaMD result.txt
+	rm -f *.o ./kernel/*.o lavaMD *.txt *.csv
