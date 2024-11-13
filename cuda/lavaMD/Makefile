@@ -17,7 +17,6 @@ a.out:		main.o \
 			./util/device/device.o \
 			-lm \
 			-L$(CUDA_LIB_DIR) \
-			-lcuda -lcudart \
 			-O3\
 			-o lavaMD
 
@@ -33,7 +32,6 @@ main.o:		main.h \
 			-o main.o \
 			-O3\
 			-std=c++11\
-			-lcuda -lcudart\
 			-L$(CUDA_LIB_DIR)
 
 ./kernel/kernel_gpu_cuda_wrapper.o:	./kernel/kernel_gpu_cuda_wrapper.h \
