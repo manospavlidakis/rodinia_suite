@@ -1,5 +1,5 @@
 #!/bin/bash
-CXXFLAGS=-DOUTPUT
+#CXXFLAGS=-DOUTPUT
 for mf in `find -name 'Makefile'`; do                                                               
     cd `dirname $mf`                                                                                
     make clean                                                                                      
