@@ -1,2 +1,0 @@
-#./pathfinder 4096 4096 2 > result.txt
-./pathfinder 4096 4096 2
