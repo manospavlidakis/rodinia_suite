@@ -469,11 +469,15 @@ void InitAry(float *ary, int ary_size) {
  **------------------------------------------------------
  */
 void PrintAry(float *ary, int ary_size) {
+  std::cerr << " Store results to output!!" << std::endl;
+  // Store the result into a file.
+  FILE *fpo = fopen("nat_result.txt", "w");
+
   int i;
   for (i = 0; i < ary_size; i++) {
-    printf("%.2f ", ary[i]);
+    fprintf(fpo, "%.2f", ary[i]);
   }
-  printf("\n\n");
+  fclose(fpo);
 }
 void checkCUDAError(const char *msg) {
   hipError_t err = hipGetLastError();
