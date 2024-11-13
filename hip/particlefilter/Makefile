@@ -4,7 +4,6 @@ EXE = particlefilter_float
 all: float
 
 float: $(SRC)
-	hipcc -O3 $(SRC) -o $(EXE)
-
+	hipcc $(CXXFLAGS) -O3 $(SRC) -o $(EXE)
 clean:
 	rm particlefilter_naive particlefilter_float

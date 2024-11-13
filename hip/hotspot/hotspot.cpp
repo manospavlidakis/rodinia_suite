@@ -386,7 +386,7 @@ void run(int argc, char **argv) {
   hipFree(warm);
 #endif
 
-#ifdef DEBUG
+#ifdef OUTPUT
   writeoutput(MatrixOut, grid_rows, grid_cols, ofile);
 #endif
   free(MatrixOut);

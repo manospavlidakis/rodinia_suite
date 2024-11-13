@@ -208,9 +208,9 @@ void runTest(int argc, char **argv) {
 
   hipMemcpy(output_itemsets, matrix_cuda, sizeof(int) * size,
             hipMemcpyDeviceToHost);
-#ifdef DEBUG
+#ifdef OUTPUT
 
-  FILE *fpo = fopen("result.txt", "w");
+  FILE *fpo = fopen("nat_result.txt", "w");
   fprintf(fpo, "print traceback value GPU:\n");
 
   for (int i = max_rows - 2, j = max_rows - 2; i >= 0, j >= 0;) {

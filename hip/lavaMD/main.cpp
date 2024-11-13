@@ -226,9 +226,9 @@ int main(int argc, char *argv[]) {
 
   kernel_gpu_cuda_wrapper(par_cpu, dim_cpu, box_cpu, rv_cpu, qv_cpu, fv_cpu);
   // dump results
-#ifdef DEBUG
+#ifdef OUTPUT
   FILE *fptr;
-  fptr = fopen("result.txt", "w");
+  fptr = fopen("nat_result.txt", "w");
   for (i = 0; i < dim_cpu.space_elem; i = i + 1) {
     fprintf(fptr, "%f, %f, %f, %f\n", fv_cpu[i].v, fv_cpu[i].x, fv_cpu[i].y,
             fv_cpu[i].z);

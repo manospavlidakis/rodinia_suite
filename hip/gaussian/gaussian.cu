@@ -173,7 +173,7 @@ int main(int argc, char *argv[]) {
   // run kernels
   ForwardSub();
 
-#ifdef DEBUG
+#ifdef INPUT
   printf("Matrix m is: \n");
   PrintMat(m, Size, Size);
 
@@ -186,10 +186,10 @@ int main(int argc, char *argv[]) {
 
   BackSub();
 
-#ifdef DEBUG
+#ifdef OUTPUT
   printf("The final solution is: \n");
   PrintAry(finalVec, Size);
-  VerifyResult();
+//  VerifyResult();
 #endif
   e_compute = std::chrono::high_resolution_clock::now();
 

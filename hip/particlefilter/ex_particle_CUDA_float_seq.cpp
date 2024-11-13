@@ -802,7 +802,7 @@ void particleFilter(unsigned char *I, int IszX, int IszY, int Nfr, int *seed,
   hipFree(seed_GPU);
   hipFree(partial_sums);
 
-#ifdef DEBUG
+#ifdef OUTPUT
   xe = 0;
   ye = 0;
   // estimate the object location by expected values

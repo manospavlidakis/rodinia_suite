@@ -190,12 +190,16 @@ int main(int argc, char *argv[]) {
   findLowest(records, distances, numRecords, resultsCount);
 
   // print out results
-#ifdef DEBUG
-  for (i = 0; i < resultsCount; i++) {
-    printf("%s --> Distance=%f\n", records[i].recString, records[i].distance);
-    free(distancesRef);
+#ifdef OUTPUT
+  std::cerr << " Store results to output!!" << std::endl;
+  // Store the result into a file.
+  FILE *fpo = fopen("nat_result.txt", "w");
+  for (int i = 0; i < resultsCount; i++)
+	  fprintf(fpo, "%s --> Distance=%f\n", records[i].recString,
+			  records[i].distance);
+  fclose(fpo);
 #endif
-    // Free memory
+  // Free memory
     hipFree(d_locations);
     hipFree(d_distances);
     e_compute = std::chrono::high_resolution_clock::now();

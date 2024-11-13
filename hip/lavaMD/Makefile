@@ -3,7 +3,7 @@ CC = g++
 
 # link objects (binaries) together
 a.out: main.o ./kernel/kernel_gpu_cuda_wrapper.o 
-	hipcc -O3  main.o \
+	hipcc $(CXXFLAGS) -O3  main.o \
 			./kernel/kernel_gpu_cuda_wrapper.o \
 			./util/num/num.o \
 			./util/timer/timer.o \
@@ -12,7 +12,7 @@ a.out: main.o ./kernel/kernel_gpu_cuda_wrapper.o
 
 # compile function files into objects (binaries)
 main.o: main.h main.cpp ./kernel/kernel_gpu_cuda_wrapper.h ./kernel/kernel_gpu_cuda_wrapper.cu 
-	hipcc $(OUTPUT) main.cpp -c -o main.o -O3
+	hipcc $(CXXFLAGS) $(OUTPUT) main.cpp -c -o main.o -O3
 
 ./kernel/kernel_gpu_cuda_wrapper.o: ./kernel/kernel_gpu_cuda_wrapper.h \
                                     ./kernel/kernel_gpu_cuda_wrapper.cu

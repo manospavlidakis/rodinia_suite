@@ -2,7 +2,7 @@ SRC = hotspot.cpp
 EXE = hotspot
 
 release: $(SRC)
-	hipcc -O3 $(SRC) -o $(EXE) 
+	hipcc -O3 $(CXXFLAGS) $(SRC) -o $(EXE) 
 
 clean:
 	rm -f *.o $(EXE) 
