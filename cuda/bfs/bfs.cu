@@ -210,7 +210,7 @@ void BFSGraph(int argc, char **argv) {
 
   // copy result from device to host
   cudaMemcpy(h_cost, d_cost, sizeof(int) * no_of_nodes, cudaMemcpyDeviceToHost);
-#ifdef DEBUG
+#ifdef OUTPUT
   // Store the result into a file
   FILE *fpo = fopen("result.txt", "w");
   for (int i = 0; i < no_of_nodes; i++)
