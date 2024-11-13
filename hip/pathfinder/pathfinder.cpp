@@ -55,6 +55,7 @@ void init(int argc, char **argv) {
     }
   }
 #ifdef OUTPUT
+  FILE *fpo;
   std::cerr << "append to file!!!" << std::endl;
   fpo = fopen("nat_result.txt", "w");
   for (int i = 0; i < rows; i++) {
