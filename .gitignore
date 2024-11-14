@@ -13,3 +13,5 @@
 */pathfinder/pathfinder
 hip/lavaMD/kernel/kernel_gpu_cuda_wrapper.o
 */*/*.csv
+*/*/*.txt
+
