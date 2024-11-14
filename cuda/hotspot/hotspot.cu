@@ -17,6 +17,19 @@ std::chrono::high_resolution_clock::time_point s_compute;
 std::chrono::high_resolution_clock::time_point e_compute;
 std::chrono::high_resolution_clock::time_point start_warmup;
 std::chrono::high_resolution_clock::time_point end_warmup;
+#define BREAKDOWNS
+#ifdef BREAKDOWNS
+std::chrono::high_resolution_clock::time_point s_b0;
+std::chrono::high_resolution_clock::time_point e_b0;
+std::chrono::high_resolution_clock::time_point s_b1;
+std::chrono::high_resolution_clock::time_point e_b1;
+std::chrono::high_resolution_clock::time_point s_b2;
+std::chrono::high_resolution_clock::time_point e_b2;
+std::chrono::high_resolution_clock::time_point s_b3;
+std::chrono::high_resolution_clock::time_point e_b3;
+
+#endif
+
 #define STR_SIZE 256
 
 /* maximum power density possible (say 300W for a 10mm x 10mm chip)	*/
@@ -332,7 +345,9 @@ void run(int argc, char **argv) {
 #endif
   s_compute = std::chrono::high_resolution_clock::now();
   float *MatrixTemp[2], *MatrixPower;
-
+#ifdef BREAKDOWNS
+  s_b0 = std::chrono::high_resolution_clock::now();
+#endif
   cudaMalloc((void **)&MatrixTemp[0], sizeof(float) * size); // FilesavingTemp
   cudaMemcpy(MatrixTemp[0], FilesavingTemp, sizeof(float) * size,
              cudaMemcpyHostToDevice);
@@ -340,15 +355,27 @@ void run(int argc, char **argv) {
   cudaMalloc((void **)&MatrixTemp[1], sizeof(float) * size);
 
   cudaMalloc((void **)&MatrixPower, sizeof(float) * size); // FilesavingPower
+
+
   cudaMemcpy(MatrixPower, FilesavingPower, sizeof(float) * size,
              cudaMemcpyHostToDevice);
-
+#ifdef BREAKDOWNS
+  e_b2 = std::chrono::high_resolution_clock::now();
+  s_b1 = std::chrono::high_resolution_clock::now();
+#endif
   int ret = compute_tran_temp(MatrixPower, MatrixTemp, grid_cols, grid_rows,
                               total_iterations, pyramid_height, blockCols,
                               blockRows, borderCols, borderRows);
-
+#ifdef BREAKDOWNS
+  cudaDeviceSynchronize();
+  e_b1 = std::chrono::high_resolution_clock::now();
+  s_b3 = std::chrono::high_resolution_clock::now();
+#endif
   cudaMemcpy(MatrixOut, MatrixTemp[ret], sizeof(float) * size,
              cudaMemcpyDeviceToHost);
+#ifdef BREAKDOWNS
+  e_b3 = std::chrono::high_resolution_clock::now();
+#endif
 
   cudaFree(MatrixPower);
   cudaFree(MatrixTemp[0]);
@@ -373,6 +400,19 @@ void run(int argc, char **argv) {
             << std::endl;
   // free warmup
   cudaFree(warm);
+#endif
+#ifdef BREAKDOWNS
+  std::cerr << " ##### Breakdown Computation #####" << std::endl;
+  std::chrono::duration<double, std::milli> allocation = e_b0 - s_b0;
+  std::cerr << "Allocation time: " << allocation.count() << " ms" << std::endl;
+  std::chrono::duration<double, std::milli> transfer = e_b2 - s_b2;
+  std::cerr << "Transfer time: " << transfer.count() << " ms" << std::endl;
+  std::chrono::duration<double, std::milli> compute = e_b1 - s_b1;
+  std::cerr << "Compute time: " << compute.count() << " ms" << std::endl;
+  std::chrono::duration<double, std::milli> transfer2 = e_b3 - s_b3;
+  std::cerr << "Transfer Back time: " << transfer2.count() << " ms"
+            << std::endl;
+  std::cerr << " #################################" << std::endl;
 #endif
 
 #ifdef OUTPUT

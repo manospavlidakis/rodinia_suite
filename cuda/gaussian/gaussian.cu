@@ -19,6 +19,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#define BREAKDOWNS
 #define RED "\033[1;31m"
 #define RESET "\033[0m"
 #define CUDA_ERROR_FATAL_RUNTIME(err)                                          \

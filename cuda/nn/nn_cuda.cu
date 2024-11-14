@@ -21,6 +21,19 @@ std::chrono::high_resolution_clock::time_point s_compute;
 std::chrono::high_resolution_clock::time_point e_compute;
 std::chrono::high_resolution_clock::time_point start_warmup;
 std::chrono::high_resolution_clock::time_point end_warmup;
+#define BREAKDOWNS
+
+#ifdef BREAKDOWNS
+std::chrono::high_resolution_clock::time_point s_b0;
+std::chrono::high_resolution_clock::time_point e_b0;
+std::chrono::high_resolution_clock::time_point s_b1;
+std::chrono::high_resolution_clock::time_point e_b1;
+std::chrono::high_resolution_clock::time_point s_b2;
+std::chrono::high_resolution_clock::time_point e_b2;
+std::chrono::high_resolution_clock::time_point s_b3;
+std::chrono::high_resolution_clock::time_point e_b3;
+
+#endif
 #define WARMUP
 typedef struct latLong {
   float lat;
@@ -144,26 +157,42 @@ int main(int argc, char *argv[]) {
   /**
    * Allocate memory on host and device
    */
+#ifdef BREAKDOWNS
+  s_b0 = std::chrono::high_resolution_clock::now();
+#endif
   distances = (float *)malloc(sizeof(float) * numRecords);
   cudaMalloc((void **)&d_locations, sizeof(LatLong) * numRecords);
   cudaMalloc((void **)&d_distances, sizeof(float) * numRecords);
-
+#ifdef BREAKDOWNS
+  cudaDeviceSynchronize();
+  e_b0 = std::chrono::high_resolution_clock::now();
+  s_b2 = std::chrono::high_resolution_clock::now();
+#endif
   /**
    * Transfer data from host to device
    */
   cudaMemcpy(d_locations, &locations[0], sizeof(LatLong) * numRecords,
              cudaMemcpyHostToDevice);
-
+#ifdef BREAKDOWNS
+  e_b2 = std::chrono::high_resolution_clock::now();
+  s_b1 = std::chrono::high_resolution_clock::now();
+#endif
   /**
    * Execute kernel
    */
   euclid<<<gridDim, threadsPerBlock>>>(d_locations, d_distances, numRecords,
                                        lat, lng);
-
+#ifdef BREAKDOWNS
+  cudaDeviceSynchronize();
+  e_b1 = std::chrono::high_resolution_clock::now();
+  s_b3 = std::chrono::high_resolution_clock::now();
+#endif
   // Copy data from device memory to host memory
   cudaMemcpy(distances, d_distances, sizeof(float) * numRecords,
              cudaMemcpyDeviceToHost);
-
+#ifdef BREAKDOWNS
+  e_b3 = std::chrono::high_resolution_clock::now();
+#endif
   // find the resultsCount least distances
   findLowest(records, distances, numRecords, resultsCount);
 
@@ -194,7 +223,19 @@ int main(int argc, char *argv[]) {
 
   std::chrono::duration<double, std::milli> elapsed_milli = end - start;
   std::cerr << "Elapsed time: " << elapsed_milli.count() << " ms" << std::endl;
-
+#ifdef BREAKDOWNS
+  std::cerr << " ##### Breakdown Computation #####" << std::endl;
+  std::chrono::duration<double, std::milli> allocation = e_b0 - s_b0;
+  std::cerr << "Allocation time: " << allocation.count() << " ms" << std::endl;
+  std::chrono::duration<double, std::milli> transfer = e_b2 - s_b2;
+  std::cerr << "Transfer time: " << transfer.count() << " ms" << std::endl;
+  std::chrono::duration<double, std::milli> compute = e_b1 - s_b1;
+  std::cerr << "Compute time: " << compute.count() << " ms" << std::endl;
+  std::chrono::duration<double, std::milli> transfer2 = e_b3 - s_b3;
+  std::cerr << "Transfer Back time: " << transfer2.count() << " ms"
+            << std::endl;
+  std::cerr << " #################################" << std::endl;
+#endif
 #ifdef WARMUP
   std::chrono::duration<double, std::milli> elapsed_milli_warmup =
       end_warmup - start_warmup;
