@@ -1,3 +1,6 @@
+#include <chrono>
+#include <cuda.h>
+#include <iostream>
 #include "./../main.h"
 #include "./kernel_gpu_cuda.cu"
 #include "./kernel_gpu_cuda_wrapper.h"

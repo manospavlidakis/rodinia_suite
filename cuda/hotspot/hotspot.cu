@@ -349,13 +349,16 @@ void run(int argc, char **argv) {
   s_b0 = std::chrono::high_resolution_clock::now();
 #endif
   cudaMalloc((void **)&MatrixTemp[0], sizeof(float) * size); // FilesavingTemp
-  cudaMemcpy(MatrixTemp[0], FilesavingTemp, sizeof(float) * size,
-             cudaMemcpyHostToDevice);
-
   cudaMalloc((void **)&MatrixTemp[1], sizeof(float) * size);
 
   cudaMalloc((void **)&MatrixPower, sizeof(float) * size); // FilesavingPower
-
+#ifdef BREAKDOWNS
+  cudaDeviceSynchronize();
+  e_b0 = std::chrono::high_resolution_clock::now();
+  s_b2 = std::chrono::high_resolution_clock::now();
+#endif
+  cudaMemcpy(MatrixTemp[0], FilesavingTemp, sizeof(float) * size,
+             cudaMemcpyHostToDevice);
 
   cudaMemcpy(MatrixPower, FilesavingPower, sizeof(float) * size,
              cudaMemcpyHostToDevice);

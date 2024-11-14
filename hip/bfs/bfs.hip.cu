@@ -47,6 +47,20 @@ struct Node {
   int no_of_edges;
 };
 
+
+#define BREAKDOWNS
+  
+#ifdef BREAKDOWNS
+std::chrono::high_resolution_clock::time_point s_b0;
+std::chrono::high_resolution_clock::time_point e_b0;
+std::chrono::high_resolution_clock::time_point s_b1;
+std::chrono::high_resolution_clock::time_point e_b1;
+std::chrono::high_resolution_clock::time_point s_b2;
+std::chrono::high_resolution_clock::time_point e_b2;
+std::chrono::high_resolution_clock::time_point s_b3;
+std::chrono::high_resolution_clock::time_point e_b3;
+      
+#endif
 #include "kernel.hip.cu"
 #include "kernel2.hip.cu"
 
@@ -154,7 +168,9 @@ void BFSGraph(int argc, char **argv) {
   end_warmup = std::chrono::high_resolution_clock::now();
 #endif
   s_compute = std::chrono::high_resolution_clock::now();
-
+#ifdef BREAKDOWNS
+  s_b0 = std::chrono::high_resolution_clock::now();
+#endif
   // Copy the Node list to device memory
   Node *d_graph_nodes;
   hipMalloc((void **)&d_graph_nodes, sizeof(Node) * no_of_nodes);
@@ -183,6 +199,11 @@ void BFSGraph(int argc, char **argv) {
 
   hipMalloc((void **)&d_over, sizeof(bool));
 
+#ifdef BREAKDOWNS
+  hipDeviceSynchronize();
+  e_b0 = std::chrono::high_resolution_clock::now();
+  s_b2 = std::chrono::high_resolution_clock::now();
+#endif
   // nodelist
   hipMemcpy(d_graph_nodes, h_graph_nodes, sizeof(Node) * no_of_nodes,
             hipMemcpyHostToDevice);
@@ -199,7 +220,10 @@ void BFSGraph(int argc, char **argv) {
             hipMemcpyHostToDevice);
   // device memory for result
   hipMemcpy(d_cost, h_cost, sizeof(int) * no_of_nodes, hipMemcpyHostToDevice);
-
+#ifdef BREAKDOWNS
+  e_b2 = std::chrono::high_resolution_clock::now();
+  s_b1 = std::chrono::high_resolution_clock::now();
+#endif
   // setup execution parameters
   dim3 grid(num_of_blocks, 1, 1);
   dim3 threads(num_of_threads_per_block, 1, 1);
@@ -224,10 +248,16 @@ void BFSGraph(int argc, char **argv) {
     hipMemcpy(&stop, d_over, sizeof(bool), hipMemcpyDeviceToHost);
     k++;
   } while (stop);
-
+#ifdef BREAKDOWNS
+  hipDeviceSynchronize();
+  e_b1 = std::chrono::high_resolution_clock::now();
+  s_b3 = std::chrono::high_resolution_clock::now();
+#endif
   // copy result from device to host
   hipMemcpy(h_cost, d_cost, sizeof(int) * no_of_nodes, hipMemcpyDeviceToHost);
-
+#ifdef BREAKDOWNS
+  e_b3 = std::chrono::high_resolution_clock::now();
+#endif
 #ifdef OUTPUT
   // Store the result into a file
   FILE *fpo = fopen("result.txt", "w");
@@ -269,5 +299,18 @@ void BFSGraph(int argc, char **argv) {
             << std::endl;
   // free warmup
   hipFree(warm);
+#endif
+#ifdef BREAKDOWNS
+  std::cerr << " ##### Breakdown Computation #####" << std::endl;
+  std::chrono::duration<double, std::milli> allocation = e_b0 - s_b0;
+  std::cerr << "Allocation time: " << allocation.count() << " ms" << std::endl;
+  std::chrono::duration<double, std::milli> transfer = e_b2 - s_b2;
+  std::cerr << "Transfer time: " << transfer.count() << " ms" << std::endl;
+  std::chrono::duration<double, std::milli> compute = e_b1 - s_b1;
+  std::cerr << "Compute time: " << compute.count() << " ms" << std::endl;
+  std::chrono::duration<double, std::milli> transfer2 = e_b3 - s_b3;
+  std::cerr << "Transfer Back time: " << transfer2.count() << " ms"
+            << std::endl;
+  std::cerr << " #################################" << std::endl;
 #endif
 }

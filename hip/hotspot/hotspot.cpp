@@ -19,6 +19,19 @@ std::chrono::high_resolution_clock::time_point e_compute;
 std::chrono::high_resolution_clock::time_point start_warmup;
 std::chrono::high_resolution_clock::time_point end_warmup;
 
+#define BREAKDOWNS
+#ifdef BREAKDOWNS
+std::chrono::high_resolution_clock::time_point s_b0;
+std::chrono::high_resolution_clock::time_point e_b0;
+std::chrono::high_resolution_clock::time_point s_b1;
+std::chrono::high_resolution_clock::time_point e_b1;
+std::chrono::high_resolution_clock::time_point s_b2;
+std::chrono::high_resolution_clock::time_point e_b2;
+std::chrono::high_resolution_clock::time_point s_b3;
+std::chrono::high_resolution_clock::time_point e_b3;
+
+#endif
+
 #define STR_SIZE 256
 
 /* maximum power density possible (say 300W for a 10mm x 10mm chip)	*/
@@ -345,23 +358,40 @@ void run(int argc, char **argv) {
   s_compute = std::chrono::high_resolution_clock::now();
 
   float *MatrixTemp[2], *MatrixPower;
+#ifdef BREAKDOWNS
+  s_b0 = std::chrono::high_resolution_clock::now();
+#endif
   hipMalloc((void **)&MatrixTemp[0], sizeof(float) * size);
   hipMalloc((void **)&MatrixTemp[1], sizeof(float) * size);
-  hipMemcpy(MatrixTemp[0], FilesavingTemp, sizeof(float) * size,
-            hipMemcpyHostToDevice);
-
   hipMalloc((void **)&MatrixPower, sizeof(float) * size);
 
+ 
+#ifdef BREAKDOWNS
+  hipDeviceSynchronize();
+  e_b0 = std::chrono::high_resolution_clock::now();
+  s_b2 = std::chrono::high_resolution_clock::now();
+#endif
   hipMemcpy(MatrixTemp[0], FilesavingTemp, sizeof(float) * size,
             hipMemcpyHostToDevice);
   hipMemcpy(MatrixPower, FilesavingPower, sizeof(float) * size,
             hipMemcpyHostToDevice);
-
+#ifdef BREAKDOWNS
+  e_b2 = std::chrono::high_resolution_clock::now();
+  s_b1 = std::chrono::high_resolution_clock::now();
+#endif
   int ret = compute_tran_temp(MatrixPower, MatrixTemp, grid_cols, grid_rows,
                               total_iterations, pyramid_height, blockCols,
                               blockRows, borderCols, borderRows);
+#ifdef BREAKDOWNS
+  hipDeviceSynchronize();
+  e_b1 = std::chrono::high_resolution_clock::now();
+  s_b3 = std::chrono::high_resolution_clock::now();
+#endif
   hipMemcpy(MatrixOut, MatrixTemp[ret], sizeof(float) * size,
             hipMemcpyDeviceToHost);
+#ifdef BREAKDOWNS
+  e_b3 = std::chrono::high_resolution_clock::now();
+#endif
   hipFree(MatrixPower);
   hipFree(MatrixTemp[0]);
   hipFree(MatrixTemp[1]);
@@ -374,7 +404,19 @@ void run(int argc, char **argv) {
   std::chrono::duration<double, std::milli> compute_milli =
       e_compute - s_compute;
   std::cerr << "Computation: " << compute_milli.count() << " ms" << std::endl;
-
+#ifdef BREAKDOWNS
+  std::cerr << " ##### Breakdown Computation #####" << std::endl;
+  std::chrono::duration<double, std::milli> allocation = e_b0 - s_b0;
+  std::cerr << "Allocation time: " << allocation.count() << " ms" << std::endl;
+  std::chrono::duration<double, std::milli> transfer = e_b2 - s_b2;
+  std::cerr << "Transfer time: " << transfer.count() << " ms" << std::endl;
+  std::chrono::duration<double, std::milli> compute = e_b1 - s_b1;
+  std::cerr << "Compute time: " << compute.count() << " ms" << std::endl;
+  std::chrono::duration<double, std::milli> transfer2 = e_b3 - s_b3;
+  std::cerr << "Transfer Back time: " << transfer2.count() << " ms"
+            << std::endl;
+  std::cerr << " #################################" << std::endl;
+#endif
   std::chrono::duration<double, std::milli> elapsed_milli = end - start;
   std::cerr << "Elapsed time: " << elapsed_milli.count() << " ms" << std::endl;
 #ifdef WARMUP

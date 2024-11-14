@@ -9,6 +9,20 @@
 #include <string.h>
 // includes, kernels
 #include "needle_kernel_hip.cu"
+
+#define BREAKDOWNS
+
+#ifdef BREAKDOWNS
+std::chrono::high_resolution_clock::time_point s_b0;
+std::chrono::high_resolution_clock::time_point e_b0;
+std::chrono::high_resolution_clock::time_point s_b1;
+std::chrono::high_resolution_clock::time_point e_b1;
+std::chrono::high_resolution_clock::time_point s_b2;
+std::chrono::high_resolution_clock::time_point e_b2;
+std::chrono::high_resolution_clock::time_point s_b3;
+std::chrono::high_resolution_clock::time_point e_b3;
+
+#endif
 #define WARMUP
 std::chrono::high_resolution_clock::time_point s_compute;
 std::chrono::high_resolution_clock::time_point e_compute;
@@ -176,13 +190,25 @@ void runTest(int argc, char **argv) {
   end_warmup = std::chrono::high_resolution_clock::now();
 #endif
   s_compute = std::chrono::high_resolution_clock::now();
+#ifdef BREAKDOWNS
+  s_b0 = std::chrono::high_resolution_clock::now();
+#endif
 
   hipMalloc((void **)&referrence_cuda, sizeof(int) * size);
   hipMalloc((void **)&matrix_cuda, sizeof(int) * size);
+#ifdef BREAKDOWNS
+  hipDeviceSynchronize();
+  e_b0 = std::chrono::high_resolution_clock::now(); 
+  s_b2 = std::chrono::high_resolution_clock::now();  
+#endif
   hipMemcpy(referrence_cuda, referrence, sizeof(int) * size,
             hipMemcpyHostToDevice);
   hipMemcpy(matrix_cuda, input_itemsets, sizeof(int) * size,
             hipMemcpyHostToDevice);
+#ifdef BREAKDOWNS
+  e_b2 = std::chrono::high_resolution_clock::now(); 
+  s_b1 = std::chrono::high_resolution_clock::now(); 
+#endif
   dim3 dimGrid;
   dim3 dimBlock(BLOCK_SIZE, 1);
   int block_width = (max_cols - 1) / BLOCK_SIZE;
@@ -205,9 +231,16 @@ void runTest(int argc, char **argv) {
                        0, referrence_cuda, matrix_cuda, max_cols, penalty, i,
                        block_width);
   }
-
+#ifdef BREAKDOWNS
+  hipDeviceSynchronize();
+  e_b1 = std::chrono::high_resolution_clock::now();
+  s_b3 = std::chrono::high_resolution_clock::now();
+#endif
   hipMemcpy(output_itemsets, matrix_cuda, sizeof(int) * size,
             hipMemcpyDeviceToHost);
+#ifdef BREAKDOWNS
+  e_b3 = std::chrono::high_resolution_clock::now();
+#endif
 #ifdef OUTPUT
 
   FILE *fpo = fopen("nat_result.txt", "w");
@@ -290,7 +323,19 @@ void runTest(int argc, char **argv) {
   std::chrono::duration<double, std::milli> compute_milli =
       e_compute - s_compute;
   std::cerr << "Computation: " << compute_milli.count() << " ms" << std::endl;
-
+#ifdef BREAKDOWNS
+  std::cerr << " ##### Breakdown Computation #####" << std::endl;
+  std::chrono::duration<double, std::milli> allocation = e_b0 - s_b0;
+  std::cerr << "Allocation time: " << allocation.count() << " ms" << std::endl;
+  std::chrono::duration<double, std::milli> transfer = e_b2 - s_b2;
+  std::cerr << "Transfer time: " << transfer.count() << " ms" << std::endl;
+  std::chrono::duration<double, std::milli> compute = e_b1 - s_b1;
+  std::cerr << "Compute time: " << compute.count() << " ms" << std::endl;
+  std::chrono::duration<double, std::milli> transfer2 = e_b3 - s_b3;
+  std::cerr << "Transfer Back time: " << transfer2.count() << " ms"
+            << std::endl;
+  std::cerr << " #################################" << std::endl;
+#endif
   std::chrono::duration<double, std::milli> elapsed_milli = end - start;
   std::cerr << "Elapsed time: " << elapsed_milli.count() << " ms" << std::endl;
 

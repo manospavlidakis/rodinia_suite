@@ -24,6 +24,18 @@ std::chrono::high_resolution_clock::time_point s_compute;
 std::chrono::high_resolution_clock::time_point e_compute;
 std::chrono::high_resolution_clock::time_point start_warmup;
 std::chrono::high_resolution_clock::time_point end_warmup;
+#define BREAKDOWNS
+#ifdef BREAKDOWNS
+std::chrono::high_resolution_clock::time_point s_b0;
+std::chrono::high_resolution_clock::time_point e_b0;
+std::chrono::high_resolution_clock::time_point s_b1;
+std::chrono::high_resolution_clock::time_point e_b1;
+std::chrono::high_resolution_clock::time_point s_b2;
+std::chrono::high_resolution_clock::time_point e_b2;
+std::chrono::high_resolution_clock::time_point s_b3;
+std::chrono::high_resolution_clock::time_point e_b3;
+
+#endif
 #define WARMUP
 #ifdef RD_WG_SIZE_0_0
 #define MAXBLOCKSIZE RD_WG_SIZE_0_0
@@ -204,6 +216,20 @@ int main(int argc, char *argv[]) {
   std::chrono::duration<double, std::milli> compute_milli =
       e_compute - s_compute;
   std::cerr << "Computation: " << compute_milli.count() << " ms" << std::endl;
+#ifdef BREAKDOWNS
+  std::cerr << " ##### Breakdown Computation #####" << std::endl;
+  std::chrono::duration<double, std::milli> allocation = e_b0 - s_b0;
+  std::cerr << "Allocation time: " << allocation.count() << " ms" << std::endl;
+  std::chrono::duration<double, std::milli> transfer = e_b2 - s_b2;
+  std::cerr << "Transfer time: " << transfer.count() << " ms" << std::endl;
+  std::chrono::duration<double, std::milli> compute = e_b1 - s_b1;
+  std::cerr << "Compute time: " << compute.count() << " ms" << std::endl;
+  std::chrono::duration<double, std::milli> transfer2 = e_b3 - s_b3;
+  std::cerr << "Transfer Back time: " << transfer2.count() << " ms"
+            << std::endl;
+
+  std::cerr << " #################################" << std::endl;
+#endif
 
   std::chrono::duration<double, std::milli> elapsed_milli = end - start;
   std::cerr << "Elapsed time: " << elapsed_milli.count() << " ms" << std::endl;
@@ -359,19 +385,32 @@ __global__ void Fan2(float *m_cuda, float *a_cuda, float *b_cuda, int Size,
 void ForwardSub() {
   int t;
   float *m_cuda, *a_cuda, *b_cuda;
-
+#ifdef BREAKDOWNS
+  s_b0 = std::chrono::high_resolution_clock::now();
+#endif
   // allocate memory on GPU
   hipMalloc((void **)&m_cuda, Size * Size * sizeof(float));
 
   hipMalloc((void **)&a_cuda, Size * Size * sizeof(float));
 
   hipMalloc((void **)&b_cuda, Size * sizeof(float));
-
+#ifdef BREAKDOWNS
+  hipDeviceSynchronize();
+  e_b0 = std::chrono::high_resolution_clock::now();
+  s_b2 = std::chrono::high_resolution_clock::now();
+#endif
   // copy memory to GPU
   hipMemcpy(m_cuda, m, Size * Size * sizeof(float), hipMemcpyHostToDevice);
   hipMemcpy(a_cuda, a, Size * Size * sizeof(float), hipMemcpyHostToDevice);
   hipMemcpy(b_cuda, b, Size * sizeof(float), hipMemcpyHostToDevice);
+#ifdef BREAKDOWNS
+  e_b2 = std::chrono::high_resolution_clock::now();
+  double data_size = (2 * (Size * Size * sizeof(float))) + Size * sizeof(float);
+  std::cerr << std::fixed << " Data size: " << data_size / 1024 / 1024 << " MB"
+            << std::endl;
 
+  s_b1 = std::chrono::high_resolution_clock::now();
+#endif
   int block_size, grid_size;
 
   block_size = MAXBLOCKSIZE;
@@ -396,11 +435,18 @@ void ForwardSub() {
                        a_cuda, b_cuda, Size, Size - t, t);
     checkCUDAError("Fan2");
   }
+#ifdef BREAKDOWNS
+  hipDeviceSynchronize();
+  e_b1 = std::chrono::high_resolution_clock::now();
+  s_b3 = std::chrono::high_resolution_clock::now();
+#endif
   // copy memory back to CPU
   hipMemcpy(m, m_cuda, Size * Size * sizeof(float), hipMemcpyDeviceToHost);
   hipMemcpy(a, a_cuda, Size * Size * sizeof(float), hipMemcpyDeviceToHost);
   hipMemcpy(b, b_cuda, Size * sizeof(float), hipMemcpyDeviceToHost);
-
+#ifdef BREAKDOWNS
+  e_b3 = std::chrono::high_resolution_clock::now();
+#endif
   hipFree(m_cuda);
   hipFree(a_cuda);
   hipFree(b_cuda);

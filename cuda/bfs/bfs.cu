@@ -22,6 +22,19 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#define BREAKDOWNS
+
+#ifdef BREAKDOWNS
+std::chrono::high_resolution_clock::time_point s_b0;
+std::chrono::high_resolution_clock::time_point e_b0;
+std::chrono::high_resolution_clock::time_point s_b1;
+std::chrono::high_resolution_clock::time_point e_b1;
+std::chrono::high_resolution_clock::time_point s_b2;
+std::chrono::high_resolution_clock::time_point e_b2;
+std::chrono::high_resolution_clock::time_point s_b3;
+std::chrono::high_resolution_clock::time_point e_b3;
+
+#endif
 //#define DEBUG
 #define MAX_THREADS_PER_BLOCK 512
 #define WARMUP
@@ -144,44 +157,61 @@ void BFSGraph(int argc, char **argv) {
 #endif
 
   s_compute = std::chrono::high_resolution_clock::now();
+#ifdef BREAKDOWNS
+  s_b0 = std::chrono::high_resolution_clock::now();
+#endif
   // Copy the Node list to device memory
   Node *d_graph_nodes;
   cudaMalloc((void **)&d_graph_nodes, sizeof(Node) * no_of_nodes);
-  cudaMemcpy(d_graph_nodes, h_graph_nodes, sizeof(Node) * no_of_nodes,
-             cudaMemcpyHostToDevice);
-
   // Copy the Edge List to device Memory
   int *d_graph_edges;
   cudaMalloc((void **)&d_graph_edges, sizeof(int) * edge_list_size);
-  cudaMemcpy(d_graph_edges, h_graph_edges, sizeof(int) * edge_list_size,
-             cudaMemcpyHostToDevice);
 
   // Copy the Mask to device memory
   bool *d_graph_mask;
   cudaMalloc((void **)&d_graph_mask, sizeof(bool) * no_of_nodes);
-  cudaMemcpy(d_graph_mask, h_graph_mask, sizeof(bool) * no_of_nodes,
-             cudaMemcpyHostToDevice);
 
   bool *d_updating_graph_mask;
   cudaMalloc((void **)&d_updating_graph_mask, sizeof(bool) * no_of_nodes);
-  cudaMemcpy(d_updating_graph_mask, h_updating_graph_mask,
-             sizeof(bool) * no_of_nodes, cudaMemcpyHostToDevice);
 
   // Copy the Visited nodes array to device memory
   bool *d_graph_visited;
   cudaMalloc((void **)&d_graph_visited, sizeof(bool) * no_of_nodes);
-  cudaMemcpy(d_graph_visited, h_graph_visited, sizeof(bool) * no_of_nodes,
-             cudaMemcpyHostToDevice);
 
   // allocate device memory for result
   int *d_cost;
   cudaMalloc((void **)&d_cost, sizeof(int) * no_of_nodes);
-  cudaMemcpy(d_cost, h_cost, sizeof(int) * no_of_nodes, cudaMemcpyHostToDevice);
 
   // make a bool to check if the execution is over
   bool *d_over;
   cudaMalloc((void **)&d_over, sizeof(bool));
 
+
+#ifdef BREAKDOWNS
+  cudaDeviceSynchronize();
+  e_b0 = std::chrono::high_resolution_clock::now();
+  s_b2 = std::chrono::high_resolution_clock::now();
+#endif
+  cudaMemcpy(d_graph_nodes, h_graph_nodes, sizeof(Node) * no_of_nodes,
+             cudaMemcpyHostToDevice);
+
+  cudaMemcpy(d_graph_edges, h_graph_edges, sizeof(int) * edge_list_size,
+             cudaMemcpyHostToDevice);
+
+  cudaMemcpy(d_graph_mask, h_graph_mask, sizeof(bool) * no_of_nodes,
+             cudaMemcpyHostToDevice);
+
+  cudaMemcpy(d_updating_graph_mask, h_updating_graph_mask,
+             sizeof(bool) * no_of_nodes, cudaMemcpyHostToDevice);
+
+  cudaMemcpy(d_graph_visited, h_graph_visited, sizeof(bool) * no_of_nodes,
+             cudaMemcpyHostToDevice);
+
+  cudaMemcpy(d_cost, h_cost, sizeof(int) * no_of_nodes, cudaMemcpyHostToDevice);
+#ifdef BREAKDOWNS
+  e_b2 = std::chrono::high_resolution_clock::now();
+  s_b1 = std::chrono::high_resolution_clock::now();
+#endif
   // setup execution parameters
   dim3 grid(num_of_blocks, 1, 1);
   dim3 threads(num_of_threads_per_block, 1, 1);
@@ -207,9 +237,16 @@ void BFSGraph(int argc, char **argv) {
     cudaMemcpy(&stop, d_over, sizeof(bool), cudaMemcpyDeviceToHost);
     k++;
   } while (stop);
-
+#ifdef BREAKDOWNS
+  cudaDeviceSynchronize();
+  e_b1 = std::chrono::high_resolution_clock::now();
+  s_b3 = std::chrono::high_resolution_clock::now();
+#endif
   // copy result from device to host
   cudaMemcpy(h_cost, d_cost, sizeof(int) * no_of_nodes, cudaMemcpyDeviceToHost);
+ #ifdef BREAKDOWNS
+  e_b3 = std::chrono::high_resolution_clock::now();
+#endif
 #ifdef OUTPUT
   // Store the result into a file
   FILE *fpo = fopen("result.txt", "w");
@@ -253,4 +290,18 @@ void BFSGraph(int argc, char **argv) {
   // free warmup
   cudaFree(warm);
 #endif
+#ifdef BREAKDOWNS
+  std::cerr << " ##### Breakdown Computation #####" << std::endl;
+  std::chrono::duration<double, std::milli> allocation = e_b0 - s_b0;
+  std::cerr << "Allocation time: " << allocation.count() << " ms" << std::endl;
+  std::chrono::duration<double, std::milli> transfer = e_b2 - s_b2;
+  std::cerr << "Transfer time: " << transfer.count() << " ms" << std::endl;
+  std::chrono::duration<double, std::milli> compute = e_b1 - s_b1;
+  std::cerr << "Compute time: " << compute.count() << " ms" << std::endl;
+  std::chrono::duration<double, std::milli> transfer2 = e_b3 - s_b3;
+  std::cerr << "Transfer Back time: " << transfer2.count() << " ms"
+            << std::endl;
+  std::cerr << " #################################" << std::endl;
+#endif
+
 }
