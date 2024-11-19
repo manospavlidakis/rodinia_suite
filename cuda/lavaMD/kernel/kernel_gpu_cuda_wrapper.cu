@@ -4,7 +4,7 @@
 #include "./../main.h"
 #include "./kernel_gpu_cuda.cu"
 #include "./kernel_gpu_cuda_wrapper.h"
-#define BREAKDOWNS
+//#define BREAKDOWNS
 #ifdef BREAKDOWNS
 std::chrono::high_resolution_clock::time_point s_b0;
 std::chrono::high_resolution_clock::time_point e_b0;

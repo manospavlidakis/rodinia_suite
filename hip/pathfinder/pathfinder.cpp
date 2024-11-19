@@ -16,7 +16,6 @@ std::chrono::high_resolution_clock::time_point e_compute;
 std::chrono::high_resolution_clock::time_point start_warmup;
 std::chrono::high_resolution_clock::time_point end_warmup;
 
-#define BREAKDOWNS
 #ifdef BREAKDOWNS
 std::chrono::high_resolution_clock::time_point s_b0;
 std::chrono::high_resolution_clock::time_point e_b0;

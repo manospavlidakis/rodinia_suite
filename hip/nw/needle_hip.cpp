@@ -10,8 +10,6 @@
 // includes, kernels
 #include "needle_kernel_hip.cu"
 
-#define BREAKDOWNS
-
 #ifdef BREAKDOWNS
 std::chrono::high_resolution_clock::time_point s_b0;
 std::chrono::high_resolution_clock::time_point e_b0;

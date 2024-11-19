@@ -4,7 +4,6 @@
 #include "./kernel_gpu_cuda_wrapper.h" // (in the current directory)
 #include "hip/hip_runtime.h"
 #include <iostream>
-#define BREAKDOWNS
 #ifdef BREAKDOWNS
 std::chrono::high_resolution_clock::time_point s_b0;
 std::chrono::high_resolution_clock::time_point e_b0;
