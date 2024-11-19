@@ -24,4 +24,4 @@ debugenum: $(SRC)
 	$(CC) -g -deviceemu $(SRC) -o $(EXE) -I$(INCLUDE) -L$(CUDA_LIB_DIR) 
 
 clean: $(SRC)
-	rm -f $(EXE) $(EXE).linkinfo *.txt *.csv 2048_*
+	rm -f $(EXE) $(EXE).linkinfo result.txt *.csv 2048_*

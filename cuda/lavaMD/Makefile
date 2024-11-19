@@ -54,6 +54,6 @@ clean:
 	rm	*.o \
 		./kernel/*.o \
 		./util/device/*.o \
-		*.txt\
+		result.txt\
 		lavaMD\
 		*.csv
