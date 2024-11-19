@@ -19,9 +19,10 @@ echo "SM version : ${SM_VERSION}"
 GENCODE_FLAGS="-gencode arch=compute_${SM_VERSION},code=sm_${SM_VERSION}"
 CXXFLAGS="-std=c++11 -m64 -O3"
 
-#if [ "$d" = "debug" ]; then
-#CXXFLAGS+=" -DOUTPUT"
-#fi
+CXXFLAGS+=" -DOUTPUT"
+
+#enable it to breakdown the GPU time
+#CXXFLAGS+=" -DBREAKDOWNS
 
 for mf in `find -name 'Makefile'`; do                                                               
     cd `dirname $mf`                                                                                
