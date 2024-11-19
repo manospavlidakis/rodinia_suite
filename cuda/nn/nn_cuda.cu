@@ -200,7 +200,7 @@ int main(int argc, char *argv[]) {
 #ifdef OUTPUT
   std::cerr << " Store results to output!!" << std::endl;
   // Store the result into a file.
-  FILE *fpo = fopen("nat_result.txt", "w");
+  FILE *fpo = fopen("result.txt", "w");
   for (int i = 0; i < resultsCount; i++)
     fprintf(fpo, "%s --> Distance=%f\n", records[i].recString,
             records[i].distance);
