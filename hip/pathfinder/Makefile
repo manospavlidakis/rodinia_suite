@@ -5,4 +5,4 @@ release:
 	hipcc $(CXXFLAGS) -O3 $(SRC) -o $(EXE) 
 
 clean: 
-	rm -f	*.o $(EXE) *.csv *.txt
+	rm -f	*.o $(EXE) *.csv result.txt

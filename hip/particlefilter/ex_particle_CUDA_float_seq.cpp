@@ -815,7 +815,7 @@ void particleFilter(unsigned char *I, int IszX, int IszY, int Nfr, int *seed,
   double distance = sqrt(pow((double)(xe - (int)roundDouble(IszY / 2.0)), 2) +
                          pow((double)(ye - (int)roundDouble(IszX / 2.0)), 2));
   FILE *fid;
-  fid = fopen("nat_result.txt", "w+");
+  fid = fopen("result.txt", "w+");
   if (fid == NULL) {
     printf("The file was not opened for writing\n");
     abort();

@@ -228,7 +228,7 @@ int main(int argc, char *argv[]) {
   // dump results
 #ifdef OUTPUT
   FILE *fptr;
-  fptr = fopen("nat_result.txt", "w");
+  fptr = fopen("result.txt", "w");
   for (i = 0; i < dim_cpu.space_elem; i = i + 1) {
     fprintf(fptr, "%f, %f, %f, %f\n", fv_cpu[i].v, fv_cpu[i].x, fv_cpu[i].y,
             fv_cpu[i].z);

@@ -6,4 +6,4 @@ release: $(SRC)
 	hipcc -O3 $(CXXFLAGS) $(SRC) -o $(EXE) 
 
 clean:
-	rm -f *.o bfs *.txt *.csv 2048_*
+	rm -f *.o bfs result.txt *.csv 2048_*
