@@ -537,7 +537,6 @@ void InitAry(float *ary, int ary_size) {
  **------------------------------------------------------
  */
 void PrintAry(float *ary, int ary_size) {
-  std::cerr << " Store results to output!!" << std::endl;
   // Store the result into a file.
   FILE *fpo = fopen("result.txt", "w");
 
