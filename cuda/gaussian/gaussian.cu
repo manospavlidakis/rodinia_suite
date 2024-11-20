@@ -165,7 +165,6 @@ int main(int argc, char *argv[]) {
       case 's': // platform
         i++;
         Size = atoi(argv[i]);
-        printf("Create matrix internally in parse, size = %d \n", Size);
 
         a = (float *)malloc(Size * Size * sizeof(float));
         create_matrix(a, Size);
