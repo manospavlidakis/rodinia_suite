@@ -53,4 +53,4 @@ averages_df = pd.DataFrame(list(averages.items()), columns=["Metric", "Average V
 output_file = os.path.join(output_dir, f"average.csv")
 averages_df.to_csv(output_file, index=False)
 
-print(f"Average values for '{benchmark}' have been written to '{output_file}'")
+#print(f"Average values for '{benchmark}' have been written to '{output_file}'")
