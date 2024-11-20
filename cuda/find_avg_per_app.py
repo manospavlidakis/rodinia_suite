@@ -50,7 +50,7 @@ averages = {metric: (sum(values) / len(values)) for metric, values in data.items
 averages_df = pd.DataFrame(list(averages.items()), columns=["Metric", "Average Value"])
 
 # Save the averages to a new CSV file for this benchmark
-output_file = os.path.join(output_dir, f"average_{benchmark}.csv")
+output_file = os.path.join(output_dir, f"average.csv")
 averages_df.to_csv(output_file, index=False)
 
 print(f"Average values for '{benchmark}' have been written to '{output_file}'")
