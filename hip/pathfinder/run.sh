@@ -4,6 +4,6 @@ file=$2
 benchmark_name="${file%.csv}"
 for ((iter=1; iter<=5;iter++))
 do
-./${benchmark_name} ./pathfinder 4096 4096 2 &> 4096_${iter}_${file}
+./${benchmark_name} 4096 4096 2 &> 4096_${iter}_${file}
 done
 ../find_avg_per_app.py  ${benchmark_name}
