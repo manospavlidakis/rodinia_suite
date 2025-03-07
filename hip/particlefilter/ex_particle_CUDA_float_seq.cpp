@@ -669,8 +669,8 @@ int findIndex(double *CDF, int lengthCDF, double value) {
  * @param seed The seed array used for random number generation
  * @param Nparticles The number of particles to be used
  */
-void particleFilter(unsigned char *I, int IszX, int IszY, int Nfr, int *seed,
-                    int Nparticles) {
+std::tuple<double, double, double*, double*, double*>
+particleFilter(unsigned char *I, int IszX, int IszY, int Nfr, int *seed, int Nparticles) {
   int max_size = IszX * IszY * Nfr;
   // original particle centroid
   double xe = roundDouble(IszY / 2.0);
@@ -802,29 +802,6 @@ void particleFilter(unsigned char *I, int IszX, int IszY, int Nfr, int *seed,
   hipFree(seed_GPU);
   hipFree(partial_sums);
 
-#ifdef OUTPUT
-  xe = 0;
-  ye = 0;
-  // estimate the object location by expected values
-  for (x = 0; x < Nparticles; x++) {
-    xe += arrayX[x] * weights[x];
-    ye += arrayY[x] * weights[x];
-  }
-  printf("XE: %lf\n", xe); 
-  printf("YE: %lf\n", ye);
-  double distance = sqrt(pow((double)(xe - (int)roundDouble(IszY / 2.0)), 2) +
-                         pow((double)(ye - (int)roundDouble(IszX / 2.0)), 2));
-  FILE *fid;
-  fid = fopen("result.txt", "w+");
-  if (fid == NULL) {
-    printf("The file was not opened for writing\n");
-    abort();
-  }
-  fprintf(fid, "XE: %lf\n", xe);
-  fprintf(fid, "YE: %lf\n", ye);
-  fprintf(fid, "distance: %lf\n", distance);
-  fclose(fid);
-#endif
   // CUDA freeing of memory
   hipFree(weights_GPU);
   hipFree(arrayY_GPU);
@@ -832,13 +809,12 @@ void particleFilter(unsigned char *I, int IszX, int IszY, int Nfr, int *seed,
 
   // free regular memory
   free(likelihood);
-  free(arrayX);
-  free(arrayY);
   free(xj);
   free(yj);
   free(CDF);
   free(ind);
   free(u);
+  return {xe, ye, weights, arrayX, arrayY};
 }
 
 int main(int argc, char *argv[]) {
@@ -925,9 +901,32 @@ int main(int argc, char *argv[]) {
       (unsigned char *)malloc(sizeof(unsigned char) * IszX * IszY * Nfr);
   // call video sequence
   videoSequence(I, IszX, IszY, Nfr, seed);
-  particleFilter(I, IszX, IszY, Nfr, seed, Nparticles);
+  auto [xe, ye, weights, arrayX, arrayY] = particleFilter(I, IszX, IszY, Nfr, seed, Nparticles);
   e_compute = std::chrono::high_resolution_clock::now();
   auto end = std::chrono::high_resolution_clock::now();
+#ifdef OUTPUT
+  xe = 0;
+  ye = 0;
+  // estimate the object location by expected values
+  for (x = 0; x < Nparticles; x++) {
+    xe += arrayX[x] * weights[x];
+    ye += arrayY[x] * weights[x];
+  }
+  printf("XE: %lf\n", xe); 
+  printf("YE: %lf\n", ye);
+  double distance = sqrt(pow((double)(xe - (int)roundDouble(IszY / 2.0)), 2) +
+                         pow((double)(ye - (int)roundDouble(IszX / 2.0)), 2));
+  FILE *fid;
+  fid = fopen("result.txt", "w+");
+  if (fid == NULL) {
+    printf("The file was not opened for writing\n");
+    abort();
+  }
+  fprintf(fid, "XE: %lf\n", xe);
+  fprintf(fid, "YE: %lf\n", ye);
+  fprintf(fid, "distance: %lf\n", distance);
+  fclose(fid);
+#endif
 
   std::chrono::duration<double, std::milli> elapsed_milli_0 = end_0 - start_0;
   std::cerr << "Init time: " << elapsed_milli_0.count() << " ms" << std::endl;
@@ -949,5 +948,8 @@ int main(int argc, char *argv[]) {
 #endif
   free(seed);
   free(I);
+  free(weights);
+  free(arrayX);
+  free(arrayY);
   return 0;
 }
