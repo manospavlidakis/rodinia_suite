@@ -219,6 +219,10 @@ int main(int argc, char *argv[]) {
   // find the resultsCount least distances
   findLowest(records, distances, numRecords, resultsCount);
 
+ // Free memory
+    hipFree(d_locations);
+    hipFree(d_distances);
+    e_compute = std::chrono::high_resolution_clock::now();
   // print out results
 #ifdef OUTPUT
   std::cerr << " Store results to output!!" << std::endl;
@@ -229,11 +233,7 @@ int main(int argc, char *argv[]) {
 			  records[i].distance);
   fclose(fpo);
 #endif
-  // Free memory
-    hipFree(d_locations);
-    hipFree(d_distances);
-    e_compute = std::chrono::high_resolution_clock::now();
-
+ 
     free(distances);
     auto end = std::chrono::high_resolution_clock::now();
     std::chrono::duration<double, std::milli> elapsed_milli_0 = end_0 - start_0;

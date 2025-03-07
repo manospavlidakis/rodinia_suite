@@ -239,6 +239,15 @@ void run(int argc, char **argv) {
   e_b1 = std::chrono::high_resolution_clock::now();
 #endif
 
+  cudaFree(gpuWall);
+  cudaFree(gpuResult[0]);
+  cudaFree(gpuResult[1]);
+  e_compute = std::chrono::high_resolution_clock::now();
+
+  delete[] data;
+  delete[] wall;
+  delete[] result;
+  auto end = std::chrono::high_resolution_clock::now();
 #ifdef OUTPUT
   for (int i = 0; i < cols; i++)
     fprintf(fpo, "%d ", data[i]);
@@ -250,15 +259,7 @@ void run(int argc, char **argv) {
   fclose(fpo);
 #endif
 
-  cudaFree(gpuWall);
-  cudaFree(gpuResult[0]);
-  cudaFree(gpuResult[1]);
-  e_compute = std::chrono::high_resolution_clock::now();
 
-  delete[] data;
-  delete[] wall;
-  delete[] result;
-  auto end = std::chrono::high_resolution_clock::now();
   std::chrono::duration<double, std::milli> elapsed_milli_0 = end_0 - start_0;
   std::cerr << "Init time: " << elapsed_milli_0.count() << " ms" << std::endl;
 

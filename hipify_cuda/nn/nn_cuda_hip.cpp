@@ -197,6 +197,10 @@ int main(int argc, char *argv[]) {
   findLowest(records, distances, numRecords, resultsCount);
 
   // print out results
+  // Free memory
+  hipFree(d_locations);
+  hipFree(d_distances);
+  e_compute = std::chrono::high_resolution_clock::now();
 #ifdef OUTPUT
   std::cerr << " Store results to output!!" << std::endl;
   // Store the result into a file.
@@ -207,10 +211,6 @@ int main(int argc, char *argv[]) {
   fclose(fpo);
 #endif
 
-  // Free memory
-  hipFree(d_locations);
-  hipFree(d_distances);
-  e_compute = std::chrono::high_resolution_clock::now();
 
   free(distances);
   auto end = std::chrono::high_resolution_clock::now();

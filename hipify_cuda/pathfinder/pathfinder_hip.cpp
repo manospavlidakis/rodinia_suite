@@ -241,6 +241,10 @@ void run(int argc, char **argv) {
   e_b1 = std::chrono::high_resolution_clock::now();
 #endif
 
+  hipFree(gpuWall);
+  hipFree(gpuResult[0]);
+  hipFree(gpuResult[1]);
+  e_compute = std::chrono::high_resolution_clock::now();
 #ifdef OUTPUT
   for (int i = 0; i < cols; i++)
     fprintf(fpo, "%d ", data[i]);
@@ -252,10 +256,6 @@ void run(int argc, char **argv) {
   fclose(fpo);
 #endif
 
-  hipFree(gpuWall);
-  hipFree(gpuResult[0]);
-  hipFree(gpuResult[1]);
-  e_compute = std::chrono::high_resolution_clock::now();
 
   delete[] data;
   delete[] wall;

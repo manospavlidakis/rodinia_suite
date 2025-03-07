@@ -242,6 +242,15 @@ void BFSGraph(int argc, char **argv) {
  #ifdef BREAKDOWNS
   e_b3 = std::chrono::high_resolution_clock::now();
 #endif
+  hipFree(d_graph_nodes);
+  hipFree(d_graph_edges);
+  hipFree(d_graph_mask);
+  hipFree(d_updating_graph_mask);
+  hipFree(d_graph_visited);
+  hipFree(d_cost);
+
+  e_compute = std::chrono::high_resolution_clock::now();
+
 #ifdef OUTPUT
   // Store the result into a file
   FILE *fpo = fopen("result.txt", "w");
@@ -251,14 +260,6 @@ void BFSGraph(int argc, char **argv) {
 
   printf("Result stored in result.txt\n");
 #endif
-  hipFree(d_graph_nodes);
-  hipFree(d_graph_edges);
-  hipFree(d_graph_mask);
-  hipFree(d_updating_graph_mask);
-  hipFree(d_graph_visited);
-  hipFree(d_cost);
-
-  e_compute = std::chrono::high_resolution_clock::now();
 
   // cleanup memory
   free(h_graph_nodes);

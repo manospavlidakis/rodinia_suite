@@ -271,6 +271,9 @@ void runTest(int argc, char **argv) {
 #endif
 
 //#define TRACEBACK
+  hipFree(referrence_cuda);
+  hipFree(matrix_cuda);
+  e_compute = std::chrono::high_resolution_clock::now();
 #ifdef OUTPUT
   FILE *fpo = fopen("result.txt", "w");
   fprintf(fpo, "print traceback value GPU:\n");
@@ -335,9 +338,6 @@ void runTest(int argc, char **argv) {
 
 #endif
 
-  hipFree(referrence_cuda);
-  hipFree(matrix_cuda);
-  e_compute = std::chrono::high_resolution_clock::now();
 
   free(referrence);
   free(input_itemsets);

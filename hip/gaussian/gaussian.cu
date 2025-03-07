@@ -197,11 +197,11 @@ int main(int argc, char *argv[]) {
 
   BackSub();
 
+  e_compute = std::chrono::high_resolution_clock::now();
 #ifdef OUTPUT
   PrintAry(finalVec, Size);
 //  VerifyResult();
 #endif
-  e_compute = std::chrono::high_resolution_clock::now();
 
   free(m);
   free(a);

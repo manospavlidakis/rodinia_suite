@@ -239,6 +239,9 @@ void runTest(int argc, char **argv) {
 #ifdef BREAKDOWNS
   e_b3 = std::chrono::high_resolution_clock::now();
 #endif
+  hipFree(referrence_cuda);
+  hipFree(matrix_cuda);
+  e_compute = std::chrono::high_resolution_clock::now();
 #ifdef OUTPUT
 
   FILE *fpo = fopen("result.txt", "w");
@@ -306,9 +309,6 @@ void runTest(int argc, char **argv) {
 
 #endif
 
-  hipFree(referrence_cuda);
-  hipFree(matrix_cuda);
-  e_compute = std::chrono::high_resolution_clock::now();
 
   free(referrence);
   free(input_itemsets);

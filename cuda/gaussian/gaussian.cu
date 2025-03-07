@@ -213,11 +213,11 @@ int main(int argc, char *argv[]) {
 
   BackSub();
 
+  e_compute = std::chrono::high_resolution_clock::now();
 #ifdef OUTPUT
   //printf("The final solution is: \n");
   PrintAry(finalVec, Size);
 #endif
-  e_compute = std::chrono::high_resolution_clock::now();
 
   free(m);
   free(a);
