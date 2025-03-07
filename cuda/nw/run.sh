@@ -2,7 +2,7 @@
 path=$1
 file=$2
 benchmark_name="${file%.csv}"
-for ((iter=1; iter<=5;iter++))
+for ((iter=1; iter<=30;iter++))
 do
 ./${benchmark_name} 8192 10 &> 8192_${iter}_${file}
 done

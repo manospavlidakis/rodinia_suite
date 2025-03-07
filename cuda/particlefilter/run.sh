@@ -2,7 +2,7 @@
 path=$1
 file=$2
 benchmark_name="${file%.csv}"
-for ((iter=1; iter<=5;iter++))
+for ((iter=1; iter<=30;iter++))
 do
 ./${benchmark_name}_float -x 128 -y 128 -z 100 -np 1000 &> 128_100_1000_${iter}_${file}
 done
