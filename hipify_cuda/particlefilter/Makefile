@@ -1,4 +1,4 @@
-SRC = ex_particle_CUDA_naive_seq_hip.cpp
+SRC = ex_particle_CUDA_float_seq_hip.cpp
 EXE = particlefilter_float
 
 all: float

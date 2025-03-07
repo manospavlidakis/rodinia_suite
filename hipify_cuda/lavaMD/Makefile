@@ -12,7 +12,7 @@ a.out: main.o ./kernel/kernel_gpu_cuda_wrapper.o
 
 # compile function files into objects (binaries)
 main.o: main.h main_hip.cpp ./kernel/kernel_gpu_cuda_wrapper.h ./kernel/kernel_gpu_cuda_wrapper_hip.cpp
-	hipcc $(CXXFLAGS) $(OUTPUT) main_hip.cpp -c -o main.o -O3
+	hipcc -O3 $(CXXFLAGS) $(OUTPUT) main_hip.cpp -c -o main.o -O3
 
 ./kernel/kernel_gpu_cuda_wrapper.o: ./kernel/kernel_gpu_cuda_wrapper.h \
                                     ./kernel/kernel_gpu_cuda_wrapper_hip.cpp
