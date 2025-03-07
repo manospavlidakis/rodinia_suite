@@ -56,6 +56,6 @@ for filename, stats in stats_dict.items():
     output_file = os.path.join(output_dir, filename)
     stats_df = pd.DataFrame(list(stats.items()), columns=["Metric", filename.replace('.csv', '').capitalize()])
     stats_df.to_csv(output_file, index=False)
-    print(f"Saved {filename} in {output_dir}")
+#    print(f"Saved {filename} in {output_dir}")
 
-print("All statistics have been computed and saved separately.")
+#print("All statistics have been computed and saved separately.")
