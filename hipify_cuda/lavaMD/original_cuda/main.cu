@@ -199,6 +199,7 @@ int main(int argc, char *argv[]) {
   kernel_gpu_cuda_wrapper(par_cpu, dim_cpu, box_cpu, rv_cpu, qv_cpu, fv_cpu);
 
   // dump results
+  e_compute = std::chrono::high_resolution_clock::now();
 #ifdef OUTPUT
   FILE *fptr;
   fptr = fopen("result.txt", "w");
@@ -208,7 +209,6 @@ int main(int argc, char *argv[]) {
   }
   fclose(fptr);
 #endif
-  e_compute = std::chrono::high_resolution_clock::now();
 
   free(rv_cpu);
   free(qv_cpu);
