@@ -1,5 +1,5 @@
 #!/bin/bash
-benchmarks=("bfs" "gaussian" "hotspot" "lavaMD" "nn" "nw" "particlefilter" "pathfinder")
+benchmarks=("bfs" "gaussian" "hotspot" "hotpot3D" "lavaMD" "nn" "nw" "particlefilter" "pathfinder")
 #benchmarks=("nn" "pathfinder")
 total_benchmarks=${#benchmarks[@]}
 echo "[===================]"

@@ -900,6 +900,8 @@ int main(int argc, char *argv[]) {
   // Warmup
   char *warm;
   hipMalloc((void **)&warm, sizeof(char));
+    hipStream_t stream;
+  hipStreamCreateWithFlags(&stream, hipStreamNonBlocking);
   end_warmup = std::chrono::high_resolution_clock::now();
 #endif
   s_compute = std::chrono::high_resolution_clock::now();

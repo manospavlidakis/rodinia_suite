@@ -148,6 +148,8 @@ void BFSGraph(int argc, char **argv) {
   start_warmup = std::chrono::high_resolution_clock::now();
   // Warmup
   hipMalloc((void **)&warm, sizeof(char));
+  hipStream_t stream;
+  hipStreamCreateWithFlags(&stream, hipStreamNonBlocking);
   end_warmup = std::chrono::high_resolution_clock::now();
 #endif
 
