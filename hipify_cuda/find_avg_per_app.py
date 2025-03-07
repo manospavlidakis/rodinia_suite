@@ -3,6 +3,7 @@ import pandas as pd
 import glob
 import os
 import sys
+import numpy as np  # Import numpy for standard deviation calculation
 
 # Check if a benchmark argument is provided
 if len(sys.argv) != 2:
@@ -12,9 +13,9 @@ if len(sys.argv) != 2:
 # Get the benchmark from the command-line argument
 benchmark = sys.argv[1]
 
-# Directory to save the average files
+# Directory to save the result files
 output_dir = "."
-#os.makedirs(output_dir, exist_ok=True)
+# os.makedirs(output_dir, exist_ok=True)
 
 # File pattern to match any directory and filenames ending with _{benchmark}.csv
 file_pattern = f"**/*_{benchmark}.csv"
@@ -25,32 +26,36 @@ if not csv_files:
     print(f"No files found for benchmark '{benchmark}'. Exiting...")
     sys.exit(1)
 
-# Initialize a dictionary to collect values for averaging
+# Initialize a dictionary to collect values for each metric
 data = {"Init time": [], "Computation": [], "Elapsed time": [], "Warmup time": []}
 
 # Process each CSV file for the specified benchmark
 for file in csv_files:
-    # Open and read the file line by line
     with open(file, 'r') as f:
         for line in f:
-            # Split the line into metric and value parts
             if ':' in line:
                 metric, value = line.split(':')
                 metric = metric.strip()
-                # Convert value to float after stripping "ms" and spaces
-                value = float(value.replace('ms', '').strip())
-                # Add the value to the appropriate list in the data dictionary
-                if metric in data:
-                    data[metric].append(value)
+                try:
+                    value = float(value.replace('ms', '').strip())  # Convert to float
+                    if metric in data:
+                        data[metric].append(value)
+                except ValueError:
+                    print(f"Warning: Skipping invalid value in file {file}: {line.strip()}")
 
-# Calculate the average of each metric
-averages = {metric: (sum(values) / len(values)) for metric, values in data.items() if values}
+# Compute statistics and save each to a separate CSV file
+stats_dict = {
+    "average.csv": {metric: np.mean(values) for metric, values in data.items() if values},
+    "min.csv": {metric: np.min(values) for metric, values in data.items() if values},
+    "max.csv": {metric: np.max(values) for metric, values in data.items() if values},
+    "std_dev.csv": {metric: np.std(values, ddof=1) for metric, values in data.items() if values},  # Sample std dev
+}
 
-# Convert averages dictionary to a DataFrame for easy saving
-averages_df = pd.DataFrame(list(averages.items()), columns=["Metric", "Average Value"])
+# Save each statistic to its respective CSV file
+for filename, stats in stats_dict.items():
+    output_file = os.path.join(output_dir, filename)
+    stats_df = pd.DataFrame(list(stats.items()), columns=["Metric", filename.replace('.csv', '').capitalize()])
+    stats_df.to_csv(output_file, index=False)
+    print(f"Saved {filename} in {output_dir}")
 
-# Save the averages to a new CSV file for this benchmark
-output_file = os.path.join(output_dir, f"average.csv")
-averages_df.to_csv(output_file, index=False)
-
-#print(f"Average values for '{benchmark}' have been written to '{output_file}'")
+print("All statistics have been computed and saved separately.")
