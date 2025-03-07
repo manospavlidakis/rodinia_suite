@@ -914,7 +914,7 @@ int main(int argc, char *argv[]) {
   xe = 0;
   ye = 0;
   // estimate the object location by expected values
-  for (x = 0; x < Nparticles; x++) {
+  for (int x = 0; x < Nparticles; x++) {
     xe += arrayX[x] * weights[x];
     ye += arrayY[x] * weights[x];
   }
