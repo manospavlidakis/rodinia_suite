@@ -2,7 +2,7 @@
 path=$1
 file=$2
 benchmark_name="${file%.csv}"
-for ((iter=1; iter<=5;iter++))
+for ((iter=1; iter<=30;iter++))
 do
 ./${benchmark_name}  1024 4000 1000000 ../../data/hotspot/temp_1024 ../../data/hotspot/power_1024 result.txt &> 1024_1M_${iter}_${file}
 done

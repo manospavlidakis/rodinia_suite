@@ -5,7 +5,7 @@ benchmark_name="${file%.csv}"
 #echo "Name: ${benchmark_name}"
 #echo "filename: "${file}
 #echo "path: "${path}
-for ((iter=1; iter<=5;iter++))
+for ((iter=1; iter<=30;iter++))
 do
 ./${benchmark_name} ../../data/bfs/graph65536.txt &>65536_${iter}_${file}
 done
