@@ -814,7 +814,7 @@ particleFilter(unsigned char *I, int IszX, int IszY, int Nfr, int *seed, int Npa
   free(CDF);
   free(ind);
   free(u);
-  return {xe, ye, weights, arrayX, arrayY};
+  return std::make_tuple(xe, ye, weights, arrayX, arrayY);
 }
 
 int main(int argc, char *argv[]) {
@@ -901,7 +901,13 @@ int main(int argc, char *argv[]) {
       (unsigned char *)malloc(sizeof(unsigned char) * IszX * IszY * Nfr);
   // call video sequence
   videoSequence(I, IszX, IszY, Nfr, seed);
-  auto [xe, ye, weights, arrayX, arrayY] = particleFilter(I, IszX, IszY, Nfr, seed, Nparticles);
+  // Call particleFilter and retrieve values
+  auto result = particleFilter(I, IszX, IszY, Nfr, seed, Nparticles);
+  double xe = std::get<0>(result);
+  double ye = std::get<1>(result);
+  double* weights = std::get<2>(result);
+  double* arrayX  = std::get<3>(result);
+  double* arrayY  = std::get<4>(result);
   e_compute = std::chrono::high_resolution_clock::now();
   auto end = std::chrono::high_resolution_clock::now();
 #ifdef OUTPUT
