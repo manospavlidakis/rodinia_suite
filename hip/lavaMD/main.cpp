@@ -75,9 +75,11 @@ int main(int argc, char *argv[]) {
         printf("ERROR: Missing value to -boxes1d parameter\n");
         return 0;
       }
-    } else if (strcmp(argv[dim_cpu.cur_arg], "-rnd_seed") == 0) {
+    } 
+
+    else if (strcmp(argv[dim_cpu.cur_arg], "-rnd_seed") == 0) {
       // check if value provided
-      if (argc > dim_cpu.cur_arg + 1) {
+      if (argc >= dim_cpu.cur_arg + 1) {
         // check if value is a number
         if (isInteger(argv[dim_cpu.cur_arg + 1]) == 1) {
           rnd_seed = atoi(argv[dim_cpu.cur_arg + 1]);
@@ -226,6 +228,8 @@ int main(int argc, char *argv[]) {
 
   kernel_gpu_cuda_wrapper(par_cpu, dim_cpu, box_cpu, rv_cpu, qv_cpu, fv_cpu);
   // dump results
+ e_compute = std::chrono::high_resolution_clock::now();
+
 #ifdef OUTPUT
   FILE *fptr;
   fptr = fopen("result.txt", "w");
@@ -235,8 +239,7 @@ int main(int argc, char *argv[]) {
   }
   fclose(fptr);
 #endif
-  e_compute = std::chrono::high_resolution_clock::now();
-
+ 
   free(rv_cpu);
   free(qv_cpu);
   free(fv_cpu);
