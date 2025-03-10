@@ -183,6 +183,7 @@ void runTest(int argc, char **argv) {
   // Warmup
   char *warm;
   cudaMalloc((void **)&warm, sizeof(char));
+  cudaDeviceSynchronize();
   end_warmup = std::chrono::high_resolution_clock::now();
 #endif
   s_compute = std::chrono::high_resolution_clock::now();

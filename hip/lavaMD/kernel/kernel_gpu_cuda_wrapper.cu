@@ -4,6 +4,7 @@
 #include "./kernel_gpu_cuda_wrapper.h" // (in the current directory)
 #include "hip/hip_runtime.h"
 #include <iostream>
+//#define BREAKDOWNS
 #ifdef BREAKDOWNS
 std::chrono::high_resolution_clock::time_point s_b0;
 std::chrono::high_resolution_clock::time_point e_b0;
@@ -67,20 +68,20 @@ void kernel_gpu_cuda_wrapper(par_str par_cpu, dim_str dim_cpu, box_str *box_cpu,
   e_b3 = std::chrono::high_resolution_clock::now();
 #endif
 #ifdef BREAKDOWNS
-  std::cerr << " ##### Breakdown Computation #####" << std::endl;
+  std::cerr << " ##### Breakdown Computation #####\n";
   std::chrono::duration<double, std::milli> allocation = e_b0 - s_b0;
-  std::cerr << "Allocation time: " << allocation.count() << " ms" << std::endl;
+  std::cerr << "Allocation time: " << allocation.count() << " ms\n";
   std::chrono::duration<double, std::milli> transfer = e_b2 - s_b2;
-  std::cerr << "Transfer time: " << transfer.count() << " ms" << std::endl;
+  std::cerr << "Transfer time: " << transfer.count() << " ms\n";
   std::chrono::duration<double, std::milli> compute = e_b1 - s_b1;
-  std::cerr << "Compute time: " << compute.count() << " ms" << std::endl;
+  std::cerr << "Compute time: " << compute.count() << " ms\n";
   std::chrono::duration<double, std::milli> transfer2 = e_b3 - s_b3;
-  std::cerr << "Transfer Back time: " << transfer2.count() << " ms"
-            << std::endl;
-  std::cerr << " #################################" << std::endl;
+  std::cerr << "Transfer Back time: " << transfer2.count() << " ms\n";
+  std::cerr << " #################################\n";
 #endif
   hipFree(d_rv_gpu);
   hipFree(d_qv_gpu);
   hipFree(d_fv_gpu);
   hipFree(d_box_gpu);
+  hipDeviceSynchronize();
 }
