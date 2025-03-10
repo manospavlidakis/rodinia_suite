@@ -195,10 +195,6 @@ int main(int argc, char *argv[]) {
 #ifdef BREAKDOWNS
   e_b3 = std::chrono::high_resolution_clock::now();
 #endif
-  // find the resultsCount least distances
-  findLowest(records, distances, numRecords, resultsCount);
-
-  // print out results
   // Free memory
   hipFree(d_locations);
   hipFree(d_distances);
@@ -213,6 +209,7 @@ int main(int argc, char *argv[]) {
   fclose(fpo);
 #endif
 
+  findLowest(records, distances, numRecords, resultsCount);
 
   free(distances);
   auto end = std::chrono::high_resolution_clock::now();

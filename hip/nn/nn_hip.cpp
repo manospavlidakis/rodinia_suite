@@ -216,10 +216,7 @@ int main(int argc, char *argv[]) {
     }
   }
 #endif
-  // find the resultsCount least distances
-  findLowest(records, distances, numRecords, resultsCount);
-
- // Free memory
+  // Free memory
     hipFree(d_locations);
     hipFree(d_distances);
     e_compute = std::chrono::high_resolution_clock::now();
@@ -233,19 +230,22 @@ int main(int argc, char *argv[]) {
 			  records[i].distance);
   fclose(fpo);
 #endif
- 
-    free(distances);
-    auto end = std::chrono::high_resolution_clock::now();
-    std::chrono::duration<double, std::milli> elapsed_milli_0 = end_0 - start_0;
-    std::cerr << "Init time: " << elapsed_milli_0.count() << " ms" << std::endl;
+  // find the resultsCount least distances
+  findLowest(records, distances, numRecords, resultsCount);
 
-    std::chrono::duration<double, std::milli> compute_milli =
-        e_compute - s_compute;
-    std::cerr << "Computation: " << compute_milli.count() << " ms" << std::endl;
 
-    std::chrono::duration<double, std::milli> elapsed_milli = end - start;
-    std::cerr << "Elapsed time: " << elapsed_milli.count() << " ms"
-              << std::endl;
+  free(distances);
+  auto end = std::chrono::high_resolution_clock::now();
+  std::chrono::duration<double, std::milli> elapsed_milli_0 = end_0 - start_0;
+  std::cerr << "Init time: " << elapsed_milli_0.count() << " ms" << std::endl;
+
+  std::chrono::duration<double, std::milli> compute_milli =
+	  e_compute - s_compute;
+  std::cerr << "Computation: " << compute_milli.count() << " ms" << std::endl;
+
+  std::chrono::duration<double, std::milli> elapsed_milli = end - start;
+  std::cerr << "Elapsed time: " << elapsed_milli.count() << " ms"
+	  << std::endl;
 #ifdef BREAKDOWNS
   std::cerr << " ##### Breakdown Computation #####" << std::endl;
   std::chrono::duration<double, std::milli> allocation = e_b0 - s_b0;
