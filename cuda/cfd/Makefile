@@ -36,5 +36,5 @@ euler3d.o: euler3d.cu
 
 # Clean rule
 clean:
-	rm -f euler3d euler3d_double pre_euler3d pre_euler3d_double *.o *.linkinfo result_density.txt result_momentum.txt result_density_energy.txt
+	rm -f cfd *.o *.linkinfo result_density.txt result_momentum.txt result_density_energy.txt
 
