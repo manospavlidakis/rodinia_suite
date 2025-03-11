@@ -8,7 +8,7 @@
 #define min(a, b) a > b ? b : a
 #define ceilDiv(a, b) (a + b - 1) / b
 #define print(x) printf(#x ": %lu\n", (unsigned long)x)
-//#define DEBUG
+// #define DEBUG
 
 #define DEFAULT_THREADS_PER_BLOCK 256
 
@@ -21,7 +21,7 @@ std::chrono::high_resolution_clock::time_point s_compute;
 std::chrono::high_resolution_clock::time_point e_compute;
 std::chrono::high_resolution_clock::time_point start_warmup;
 std::chrono::high_resolution_clock::time_point end_warmup;
-//#define BREAKDOWNS
+// #define BREAKDOWNS
 
 #ifdef BREAKDOWNS
 std::chrono::high_resolution_clock::time_point s_b0;
@@ -104,9 +104,9 @@ int main(int argc, char *argv[]) {
   auto end_0 = std::chrono::high_resolution_clock::now();
 #ifdef WARMUP
   start_warmup = std::chrono::high_resolution_clock::now();
-  // Warmup
-  char *warm;
-  cudaMalloc((void **)&warm, sizeof(char));
+  bouble *warm;
+  cudaMalloc((void **)&warm, sizeof(double) * 100000);
+  cudaFree(warm);
   end_warmup = std::chrono::high_resolution_clock::now();
 #endif
   s_compute = std::chrono::high_resolution_clock::now();
@@ -193,7 +193,7 @@ int main(int argc, char *argv[]) {
 #ifdef BREAKDOWNS
   e_b3 = std::chrono::high_resolution_clock::now();
 #endif
-   // print out results
+  // print out results
   // Free memory
   cudaFree(d_locations);
   cudaFree(d_distances);
@@ -239,8 +239,6 @@ int main(int argc, char *argv[]) {
       end_warmup - start_warmup;
   std::cerr << "Warmup time: " << elapsed_milli_warmup.count() << " ms"
             << std::endl;
-  // free warmup
-  cudaFree(warm);
 #endif
 }
 

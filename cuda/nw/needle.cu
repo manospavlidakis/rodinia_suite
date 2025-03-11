@@ -15,7 +15,7 @@ std::chrono::high_resolution_clock::time_point e_compute;
 std::chrono::high_resolution_clock::time_point start_warmup;
 std::chrono::high_resolution_clock::time_point end_warmup;
 
-//#define BREAKDOWNS
+// #define BREAKDOWNS
 
 #ifdef BREAKDOWNS
 std::chrono::high_resolution_clock::time_point s_b0;
@@ -181,9 +181,9 @@ void runTest(int argc, char **argv) {
 #ifdef WARMUP
   start_warmup = std::chrono::high_resolution_clock::now();
   // Warmup
-  char *warm;
-  cudaMalloc((void **)&warm, sizeof(char));
-  cudaDeviceSynchronize();
+  bouble *warm;
+  cudaMalloc((void **)&warm, sizeof(double) * 100000);
+  cudaFree(warm);
   end_warmup = std::chrono::high_resolution_clock::now();
 #endif
   s_compute = std::chrono::high_resolution_clock::now();
@@ -271,7 +271,7 @@ void runTest(int argc, char **argv) {
   e_b3 = std::chrono::high_resolution_clock::now();
 #endif
 
-//#define TRACEBACK
+  // #define TRACEBACK
   cudaFree(referrence_cuda);
   cudaFree(matrix_cuda);
   e_compute = std::chrono::high_resolution_clock::now();
@@ -339,7 +339,6 @@ void runTest(int argc, char **argv) {
 
 #endif
 
-
   free(referrence);
   free(input_itemsets);
   free(output_itemsets);
@@ -374,7 +373,5 @@ void runTest(int argc, char **argv) {
       end_warmup - start_warmup;
   std::cerr << "Warmup time: " << elapsed_milli_warmup.count() << " ms"
             << std::endl;
-  // free warmup
-  cudaFree(warm);
 #endif
 }

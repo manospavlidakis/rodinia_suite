@@ -22,7 +22,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-//#define BREAKDOWNS
+// #define BREAKDOWNS
 
 #ifdef BREAKDOWNS
 std::chrono::high_resolution_clock::time_point s_b0;
@@ -35,7 +35,7 @@ std::chrono::high_resolution_clock::time_point s_b3;
 std::chrono::high_resolution_clock::time_point e_b3;
 
 #endif
-//#define DEBUG
+// #define DEBUG
 #define MAX_THREADS_PER_BLOCK 512
 #define WARMUP
 std::chrono::high_resolution_clock::time_point s_compute;
@@ -46,7 +46,6 @@ int no_of_nodes;
 int edge_list_size;
 FILE *fp;
 
-char *warm;
 // Structure to hold a node information
 struct Node {
   int starting;
@@ -152,7 +151,9 @@ void BFSGraph(int argc, char **argv) {
 #ifdef WARMUP
   start_warmup = std::chrono::high_resolution_clock::now();
   // Warmup
-  cudaMalloc((void **)&warm, sizeof(char));
+  bouble *warm;
+  cudaMalloc((void **)&warm, sizeof(double) * 100000);
+  cudaFree(warm);
   end_warmup = std::chrono::high_resolution_clock::now();
 #endif
 
@@ -185,7 +186,6 @@ void BFSGraph(int argc, char **argv) {
   // make a bool to check if the execution is over
   bool *d_over;
   cudaMalloc((void **)&d_over, sizeof(bool));
-
 
 #ifdef BREAKDOWNS
   cudaDeviceSynchronize();
@@ -244,7 +244,7 @@ void BFSGraph(int argc, char **argv) {
 #endif
   // copy result from device to host
   cudaMemcpy(h_cost, d_cost, sizeof(int) * no_of_nodes, cudaMemcpyDeviceToHost);
- #ifdef BREAKDOWNS
+#ifdef BREAKDOWNS
   e_b3 = std::chrono::high_resolution_clock::now();
 #endif
   cudaFree(d_graph_nodes);
@@ -287,8 +287,6 @@ void BFSGraph(int argc, char **argv) {
       end_warmup - start_warmup;
   std::cerr << "Warmup time: " << elapsed_milli_warmup.count() << " ms"
             << std::endl;
-  // free warmup
-  cudaFree(warm);
 #endif
 #ifdef BREAKDOWNS
   std::cerr << " ##### Breakdown Computation #####" << std::endl;
@@ -303,5 +301,4 @@ void BFSGraph(int argc, char **argv) {
             << std::endl;
   std::cerr << " #################################" << std::endl;
 #endif
-
 }

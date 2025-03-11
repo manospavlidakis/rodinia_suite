@@ -199,8 +199,9 @@ int main(int argc, char **argv) {
 #ifdef WARMUP
   start_warmup = std::chrono::high_resolution_clock::now();
   // Warmup
-  char *warm;
-  cudaMalloc((void **)&warm, sizeof(char));
+  bouble *warm;
+  cudaMalloc((void **)&warm, sizeof(double) * 100000);
+  cudaFree(warm);
   end_warmup = std::chrono::high_resolution_clock::now();
 #endif
   s_compute = std::chrono::high_resolution_clock::now();
@@ -235,8 +236,6 @@ int main(int argc, char **argv) {
       end_warmup - start_warmup;
   std::cerr << "Warmup time: " << elapsed_milli_warmup.count() << " ms"
             << std::endl;
-  // free warmup
-  cudaFree(warm);
 #endif
   return 0;
 }

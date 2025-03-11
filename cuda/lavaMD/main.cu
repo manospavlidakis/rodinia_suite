@@ -150,15 +150,15 @@ int main(int argc, char *argv[]) {
               }
 
             } // neighbor boxes in x direction
-          }   // neighbor boxes in y direction
-        }     // neighbor boxes in z direction
+          } // neighbor boxes in y direction
+        } // neighbor boxes in z direction
 
         // increment home box
         nh = nh + 1;
 
       } // home boxes in x direction
-    }   // home boxes in y direction
-  }     // home boxes in z direction
+    } // home boxes in y direction
+  } // home boxes in z direction
 
   // random generator seed set to random value - time in this case
   srand(100);
@@ -189,9 +189,9 @@ int main(int argc, char *argv[]) {
   auto end_0 = std::chrono::high_resolution_clock::now();
 #ifdef WARMUP
   start_warmup = std::chrono::high_resolution_clock::now();
-  // Warmup
-  char *warm;
-  cudaMalloc((void **)&warm, sizeof(char));
+  bouble *warm;
+  cudaMalloc((void **)&warm, sizeof(double) * 100000);
+  cudaFree(warm);
   end_warmup = std::chrono::high_resolution_clock::now();
 #endif
   s_compute = std::chrono::high_resolution_clock::now();
@@ -231,8 +231,6 @@ int main(int argc, char *argv[]) {
       end_warmup - start_warmup;
   std::cerr << "Warmup time: " << elapsed_milli_warmup.count() << " ms"
             << std::endl;
-  // free warmup
-  cudaFree(warm);
 #endif
   return 0.0;
 }

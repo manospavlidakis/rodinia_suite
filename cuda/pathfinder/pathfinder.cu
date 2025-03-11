@@ -16,7 +16,7 @@ std::chrono::high_resolution_clock::time_point e_compute;
 std::chrono::high_resolution_clock::time_point start_warmup;
 std::chrono::high_resolution_clock::time_point end_warmup;
 
-//#define BREAKDOWNS
+// #define BREAKDOWNS
 #ifdef BREAKDOWNS
 std::chrono::high_resolution_clock::time_point s_b0;
 std::chrono::high_resolution_clock::time_point e_b0;
@@ -197,9 +197,9 @@ void run(int argc, char **argv) {
   auto end_0 = std::chrono::high_resolution_clock::now();
 #ifdef WARMUP
   start_warmup = std::chrono::high_resolution_clock::now();
-  // Warmup
-  char *warm;
-  cudaMalloc((void **)&warm, sizeof(char));
+  bouble *warm;
+  cudaMalloc((void **)&warm, sizeof(double) * 100000);
+  cudaFree(warm);
   end_warmup = std::chrono::high_resolution_clock::now();
 #endif
   s_compute = std::chrono::high_resolution_clock::now();
@@ -254,7 +254,6 @@ void run(int argc, char **argv) {
   fclose(fpo);
 #endif
 
-
   delete[] data;
   delete[] wall;
   delete[] result;
@@ -286,7 +285,5 @@ void run(int argc, char **argv) {
       end_warmup - start_warmup;
   std::cerr << "Warmup time: " << elapsed_milli_warmup.count() << " ms"
             << std::endl;
-  // free warmup
-  cudaFree(warm);
 #endif
 }

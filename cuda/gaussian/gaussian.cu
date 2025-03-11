@@ -36,13 +36,12 @@ cudaErrorCheckFatal_Runtime(cudaError_t err, const char *func, const char *file,
   }
 }
 
-
 std::chrono::high_resolution_clock::time_point s_compute;
 std::chrono::high_resolution_clock::time_point e_compute;
 std::chrono::high_resolution_clock::time_point start_warmup;
 std::chrono::high_resolution_clock::time_point end_warmup;
 #define DEBUG
-//#define BREAKDOWNS
+// #define BREAKDOWNS
 #ifdef BREAKDOWNS
 std::chrono::high_resolution_clock::time_point s_b0;
 std::chrono::high_resolution_clock::time_point e_b0;
@@ -191,8 +190,9 @@ int main(int argc, char *argv[]) {
 #ifdef WARMUP
   start_warmup = std::chrono::high_resolution_clock::now();
   // Warmup
-  char *warm;
-  cudaMalloc((void **)&warm, sizeof(char));
+  bouble *warm;
+  cudaMalloc((void **)&warm, sizeof(double) * 1000000);
+  cudaFree(warm);
   end_warmup = std::chrono::high_resolution_clock::now();
 #endif
 
@@ -215,7 +215,7 @@ int main(int argc, char *argv[]) {
 
   e_compute = std::chrono::high_resolution_clock::now();
 #ifdef OUTPUT
-  //printf("The final solution is: \n");
+  // printf("The final solution is: \n");
   PrintAry(finalVec, Size);
 #endif
 
@@ -253,8 +253,6 @@ int main(int argc, char *argv[]) {
       end_warmup - start_warmup;
   std::cerr << "Warmup time: " << elapsed_milli_warmup.count() << " ms"
             << std::endl;
-  // free warmup
-  cudaFree(warm);
 #endif
 }
 /*------------------------------------------------------
@@ -417,9 +415,12 @@ void ForwardSub() {
 #endif
 
   // copy memory to GPU
-  CUDA_ERROR_FATAL_RUNTIME(cudaMemcpy(m_cuda, m, Size * Size * sizeof(float), cudaMemcpyHostToDevice));
-  CUDA_ERROR_FATAL_RUNTIME(cudaMemcpy(a_cuda, a, Size * Size * sizeof(float), cudaMemcpyHostToDevice));
-  CUDA_ERROR_FATAL_RUNTIME(cudaMemcpy(b_cuda, b, Size * sizeof(float), cudaMemcpyHostToDevice));
+  CUDA_ERROR_FATAL_RUNTIME(cudaMemcpy(m_cuda, m, Size * Size * sizeof(float),
+                                      cudaMemcpyHostToDevice));
+  CUDA_ERROR_FATAL_RUNTIME(cudaMemcpy(a_cuda, a, Size * Size * sizeof(float),
+                                      cudaMemcpyHostToDevice));
+  CUDA_ERROR_FATAL_RUNTIME(
+      cudaMemcpy(b_cuda, b, Size * sizeof(float), cudaMemcpyHostToDevice));
 
 #ifdef BREAKDOWNS
   e_b2 = std::chrono::high_resolution_clock::now();
@@ -461,9 +462,12 @@ void ForwardSub() {
 #endif
 
   // copy memory back to CPU
-  CUDA_ERROR_FATAL_RUNTIME(cudaMemcpy(m, m_cuda, Size * Size * sizeof(float), cudaMemcpyDeviceToHost));
-  CUDA_ERROR_FATAL_RUNTIME(cudaMemcpy(a, a_cuda, Size * Size * sizeof(float), cudaMemcpyDeviceToHost));
-  CUDA_ERROR_FATAL_RUNTIME(cudaMemcpy(b, b_cuda, Size * sizeof(float), cudaMemcpyDeviceToHost));
+  CUDA_ERROR_FATAL_RUNTIME(cudaMemcpy(m, m_cuda, Size * Size * sizeof(float),
+                                      cudaMemcpyDeviceToHost));
+  CUDA_ERROR_FATAL_RUNTIME(cudaMemcpy(a, a_cuda, Size * Size * sizeof(float),
+                                      cudaMemcpyDeviceToHost));
+  CUDA_ERROR_FATAL_RUNTIME(
+      cudaMemcpy(b, b_cuda, Size * sizeof(float), cudaMemcpyDeviceToHost));
 #ifdef BREAKDOWNS
   e_b3 = std::chrono::high_resolution_clock::now();
 #endif
