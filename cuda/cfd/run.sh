@@ -7,6 +7,6 @@ benchmark_name="${file%.csv}"
 #echo "path: "${path}
 for ((iter=1; iter<=30;iter++))
 do
-./${benchmark_name} ../../data/bfs/graph65536.txt &>65536_${iter}_${file}
+./${benchmark_name} ../../data/cfd/fvcorr.domn.193K &>193K_${iter}_${file}
 done
 ../find_avg_per_app.py  ${benchmark_name}

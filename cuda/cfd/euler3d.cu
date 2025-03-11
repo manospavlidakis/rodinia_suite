@@ -128,14 +128,14 @@ void dump(float *variables, int nel, int nelr) {
   MY_VERIFY_FLOAT_CUSTOM(h_variables, nelr * NVAR, 1.0e-06, 1);
 
   {
-    std::ofstream file("density");
+    std::ofstream file("result_density.txt");
     file << nel << " " << nelr << std::endl;
     for (int i = 0; i < nel; i++)
       file << h_variables[i + VAR_DENSITY * nelr] << std::endl;
   }
 
   {
-    std::ofstream file("momentum");
+    std::ofstream file("result_momentum.txt");
     file << nel << " " << nelr << std::endl;
     for (int i = 0; i < nel; i++) {
       for (int j = 0; j != NDIM; j++)
@@ -145,7 +145,7 @@ void dump(float *variables, int nel, int nelr) {
   }
 
   {
-    std::ofstream file("density_energy");
+    std::ofstream file("result_density_energy.txt");
     file << nel << " " << nelr << std::endl;
     for (int i = 0; i < nel; i++)
       file << h_variables[i + VAR_DENSITY_ENERGY * nelr] << std::endl;
