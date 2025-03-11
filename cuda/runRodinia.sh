@@ -1,18 +1,16 @@
 #!/bin/bash
-
-export CUDA_HOME="/opt/cuda/"
-export LIBNVVM_HOME=${CUDA_HOME}/nvvm
-export LD_LIBRARY_PATH=${CUDA_HOME}/lib64:$LD_LIBRARY_PATH
-export LD_LIBRARY_PATH=${CUDA_HOME}/extras/CUPTI/lib64:$LD_LIBRARY_PATH
-export PATH=${CUDA_HOME}/bin:${PATH}
-export PATH=${CUDA_HOME}/bin/cuobjdump:${PATH}
-
-benchmarks=("bfs" "gaussian" "hotspot" "hotspot3D" "lavaMD" "nn" "nw" "particlefilter" "pathfinder")
+benchmarks=("bfs" "gaussian" "hotspot" "lavaMD" "nn" "nw" "particlefilter" "pathfinder")
+#benchmarks=("nn" "pathfinder")
+total_benchmarks=${#benchmarks[@]}
+echo "[===================]"
 for str in ${benchmarks[@]}
 do
-    echo "Running ${str}"
+    echo "[ RUN               ] $str"
     cd ${str}
     path=$(pwd)
     ./run.sh ${path} ${str}.csv
+    value=$(grep "Computation" "average.csv" |  awk -F',' '{printf "%.2f", $2}')
+    echo "[   AVG GPU time    ] $value ms"
     cd - &>/dev/null
 done
+echo "[===================] $total_benchmarks apps ran."
