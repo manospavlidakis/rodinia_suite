@@ -932,7 +932,7 @@ int main(int argc, char *argv[]) {
     double distance = sqrt(pow((double)(xe - (int)roundDouble(IszY / 2.0)), 2) +
                            pow((double)(ye - (int)roundDouble(IszX / 2.0)), 2));
 
-    FILE *fid = fopen("nat_result.txt", "w+");
+    FILE *fid = fopen("result.txt", "w+");
     if (fid == NULL) {
         printf("The file was not opened for writing\n");
         abort();
