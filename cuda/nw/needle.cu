@@ -181,7 +181,7 @@ void runTest(int argc, char **argv) {
 #ifdef WARMUP
   start_warmup = std::chrono::high_resolution_clock::now();
   // Warmup
-  bouble *warm;
+  double *warm;
   cudaMalloc((void **)&warm, sizeof(double) * 100000);
   cudaFree(warm);
   end_warmup = std::chrono::high_resolution_clock::now();
