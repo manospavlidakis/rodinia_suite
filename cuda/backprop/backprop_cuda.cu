@@ -174,7 +174,6 @@ extern "C" void bpnn_train_cuda(BPNN *net, float *eo, float *eh) {
   cudaFree(input_prev_weights_cuda);
   cudaFree(hidden_delta_cuda);
   e_compute = std::chrono::high_resolution_clock::now();
-  std::cout << "Add resutls to result.txt" << std::endl;
   // Open a file for output
   std::ofstream outfile("result.txt");
   if (!outfile) {
