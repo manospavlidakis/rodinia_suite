@@ -17,7 +17,7 @@ CUDA_LIB_DIR=$CUDA_DIR/lib64
 echo "SM version : ${SM_VERSION}"
 
 GENCODE_FLAGS="-gencode arch=compute_${SM_VERSION},code=sm_${SM_VERSION}"
-CXXFLAGS="-std=c++11 -m64 -O3"
+CXXFLAGS=" -m64 -O3"
 
 CXXFLAGS+=" -DOUTPUT"
 
