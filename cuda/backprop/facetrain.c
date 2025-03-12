@@ -1,6 +1,7 @@
 
 
 #include "backprop.h"
+#include "imagenet.h"
 #include "omp.h"
 #include <cuda.h>
 #include <math.h>
@@ -12,7 +13,7 @@ extern void exit();
 
 int layer_size = 0;
 
-backprop_face() {
+void backprop_face() {
   BPNN *net;
   int i;
   float out_err, hid_err;
@@ -24,10 +25,7 @@ backprop_face() {
   bpnn_free(net);
 }
 
-int setup(argc, argv)
-int argc;
-char *argv[];
-{
+int setup(int argc, char *argv[]) {
   int seed;
   if (argc != 2) {
     fprintf(stderr, "usage: backprop <num of input elements>\n");
