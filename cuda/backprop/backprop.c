@@ -36,9 +36,7 @@ float dpn1() { return ((drnd() * 2.0) - 1.0); }
 
 /*** The squashing function.  Currently, it's a sigmoid. ***/
 
-float squash(x)
-float x;
-{
+float squash(float x) {
   float m;
   // x = -x;
   // m = 1 + x + x*x/2 + x*x*x/6 + x*x*x*x/24 + x*x*x*x*x/120;
@@ -48,9 +46,7 @@ float x;
 
 /*** Allocate 1d array of floats ***/
 
-float *alloc_1d_dbl(n)
-int n;
-{
+float *alloc_1d_dbl(int n) {
   float *new;
 
   new = (float *)malloc((unsigned)(n * sizeof(float)));
@@ -63,9 +59,7 @@ int n;
 
 /*** Allocate 2d array of floats ***/
 
-float **alloc_2d_dbl(m, n)
-int m, n;
-{
+float **alloc_2d_dbl(int m, int n) {
   int i;
   float **new;
 
@@ -82,9 +76,7 @@ int m, n;
   return (new);
 }
 
-bpnn_randomize_weights(w, m, n) float **w;
-int m, n;
-{
+bpnn_randomize_weights(float **w, int m, int n) {
   int i, j;
 
   for (i = 0; i <= m; i++) {
@@ -95,9 +87,7 @@ int m, n;
   }
 }
 
-bpnn_randomize_row(w, m) float *w;
-int m;
-{
+bpnn_randomize_row(float *w, int m) {
   int i;
   for (i = 0; i <= m; i++) {
     // w[i] = (float) rand()/RAND_MAX;
@@ -105,9 +95,7 @@ int m;
   }
 }
 
-bpnn_zero_weights(w, m, n) float **w;
-int m, n;
-{
+bpnn_zero_weights(float **w, int m, int n) {
   int i, j;
 
   for (i = 0; i <= m; i++) {
@@ -117,14 +105,12 @@ int m, n;
   }
 }
 
-void bpnn_initialize(seed) {
+void bpnn_initialize(int seed) {
   // printf("Random number generator seed: %d\n", seed);
   srand(seed);
 }
 
-BPNN *bpnn_internal_create(n_in, n_hidden, n_out)
-int n_in, n_hidden, n_out;
-{
+BPNN *bpnn_internal_create(int n_in, int n_hidden, int n_out) {
   BPNN *newnet;
 
   newnet = (BPNN *)malloc(sizeof(BPNN));
@@ -153,8 +139,7 @@ int n_in, n_hidden, n_out;
   return (newnet);
 }
 
-void bpnn_free(net) BPNN *net;
-{
+void bpnn_free(BPNN *net) {
   int n1, n2, i;
 
   n1 = net->input_n;
@@ -194,9 +179,7 @@ void bpnn_free(net) BPNN *net;
      error computations, etc).
 ***/
 
-BPNN *bpnn_create(n_in, n_hidden, n_out)
-int n_in, n_hidden, n_out;
-{
+BPNN *bpnn_create(int n_in, int n_hidden, int n_out) {
 
   BPNN *newnet;
 
@@ -214,9 +197,7 @@ int n_in, n_hidden, n_out;
   return (newnet);
 }
 
-void bpnn_layerforward(l1, l2, conn, n1, n2) float *l1, *l2, **conn;
-int n1, n2;
-{
+void bpnn_layerforward(float *l1, float *l2, float **conn, int n1, int n2) {
   float sum;
   int j, k;
 
@@ -240,10 +221,8 @@ int n1, n2;
 }
 
 // extern "C"
-void bpnn_output_error(delta, target, output, nj, err) float *delta, *target,
-    *output, *err;
-int nj;
-{
+void bpnn_output_error(float *delta, float *target, float *output, int nj,
+                       float *err) {
   int j;
   float o, t, errsum;
   errsum = 0.0;
@@ -256,11 +235,8 @@ int nj;
   *err = errsum;
 }
 
-void bpnn_hidden_error(delta_h, nh, delta_o, no, who, hidden,
-                       err) float *delta_h,
-    *delta_o, *hidden, **who, *err;
-int nh, no;
-{
+void bpnn_hidden_error(float *delta_h, int nh, float *delta_o, int no,
+                       float **who, float *hidden, float *err) {
   int j, k;
   float h, sum, errsum;
 
@@ -277,9 +253,8 @@ int nh, no;
   *err = errsum;
 }
 
-void bpnn_adjust_weights(delta, ndelta, ly, nly, w, oldw) float *delta, *ly,
-    **w, **oldw;
-{
+void bpnn_adjust_weights(float *delta, int ndelta, float *ly, int nly,
+                         float **w, float **oldw) {
   float new_dw;
   int k, j;
   ly[0] = 1.0;
@@ -300,8 +275,7 @@ void bpnn_adjust_weights(delta, ndelta, ly, nly, w, oldw) float *delta, *ly,
   }
 }
 
-void bpnn_feedforward(net) BPNN *net;
-{
+void bpnn_feedforward(BPNN *net) {
   int in, hid, out;
 
   in = net->input_n;
@@ -315,9 +289,7 @@ void bpnn_feedforward(net) BPNN *net;
                     hid, out);
 }
 
-void bpnn_train(net, eo, eh) BPNN *net;
-float *eo, *eh;
-{
+void bpnn_train(BPNN *net, float *eo, float *eh) {
   int in, hid, out;
   float out_err, hid_err;
 
@@ -346,9 +318,7 @@ float *eo, *eh;
                       net->input_weights, net->input_prev_weights);
 }
 
-void bpnn_save(net, filename) BPNN *net;
-char *filename;
-{
+void bpnn_save(BPNN *net, char *filename) {
   int n1, n2, n3, i, j, memcnt;
   float dvalue, **w;
   char *mem;
@@ -411,9 +381,7 @@ char *filename;
   return;
 }
 
-BPNN *bpnn_read(filename)
-char *filename;
-{
+BPNN *bpnn_read(char *filename) {
   char *mem;
   BPNN *new;
   int fd, n1, n2, n3, i, j, memcnt;
