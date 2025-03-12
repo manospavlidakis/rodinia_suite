@@ -523,6 +523,8 @@ int main(int argc, char **argv) {
   // Warmup
   double *warm;
   hipMalloc((void **)&warm, sizeof(double) * 100000);
+  hipStream_t stream;
+  hipStreamCreateWithFlags(&stream, hipStreamNonBlocking);
   hipFree(warm);
   end_warmup = std::chrono::high_resolution_clock::now();
 #endif

@@ -28,5 +28,5 @@ euler3d.o: euler3d_hip.cpp
 
 # Clean rule
 clean:
-	rm -f cfd *.o *.linkinfo result_density.txt result_momentum.txt result_density_energy.txt
+	rm -f cfd *.o *.linkinfo result_density.txt result_momentum.txt result_density_energy.txt *.csv
 
