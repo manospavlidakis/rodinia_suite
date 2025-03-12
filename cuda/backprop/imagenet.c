@@ -5,9 +5,7 @@
 
 extern int layer_size;
 
-int load(net)
-BPNN *net;
-{
+int load(BPNN *net) {
   float *units;
   int nr, nc, imgsize, i, j, k;
 

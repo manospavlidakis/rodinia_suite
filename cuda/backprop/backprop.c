@@ -76,7 +76,7 @@ float **alloc_2d_dbl(int m, int n) {
   return (new);
 }
 
-bpnn_randomize_weights(float **w, int m, int n) {
+void bpnn_randomize_weights(float **w, int m, int n) {
   int i, j;
 
   for (i = 0; i <= m; i++) {
@@ -87,7 +87,7 @@ bpnn_randomize_weights(float **w, int m, int n) {
   }
 }
 
-bpnn_randomize_row(float *w, int m) {
+void bpnn_randomize_row(float *w, int m) {
   int i;
   for (i = 0; i <= m; i++) {
     // w[i] = (float) rand()/RAND_MAX;
@@ -95,7 +95,7 @@ bpnn_randomize_row(float *w, int m) {
   }
 }
 
-bpnn_zero_weights(float **w, int m, int n) {
+void bpnn_zero_weights(float **w, int m, int n) {
   int i, j;
 
   for (i = 0; i <= m; i++) {
@@ -384,25 +384,31 @@ void bpnn_save(BPNN *net, char *filename) {
 BPNN *bpnn_read(char *filename) {
   char *mem;
   BPNN *new;
-  int fd, n1, n2, n3, i, j, memcnt;
-
-  if ((fd = open(filename, 0, 0644)) == -1) {
-    return (NULL);
+  int n1, n2, n3, i, j, memcnt;
+  FILE *file = fopen(filename, "rb"); // Open the file in binary read mode
+  if (!file) {
+    printf("Cannot open file '%s' for reading.\n", filename);
+    abort();
   }
-
   printf("Reading '%s'\n", filename); // fflush(stdout);
+  fread(&n1, sizeof(int), 1, file);
+  fread(&n2, sizeof(int), 1, file);
+  fread(&n3, sizeof(int), 1, file);
 
-  read(fd, (char *)&n1, sizeof(int));
-  read(fd, (char *)&n2, sizeof(int));
-  read(fd, (char *)&n3, sizeof(int));
   new = bpnn_internal_create(n1, n2, n3);
+  if (!new) {
+    printf("Failed to create network structure.\n");
+    fclose(file);
+    abort();
+  }
 
   printf("'%s' contains a %dx%dx%d network\n", filename, n1, n2, n3);
   printf("Reading input weights..."); // fflush(stdout);
 
   memcnt = 0;
   mem = (char *)malloc((unsigned)((n1 + 1) * (n2 + 1) * sizeof(float)));
-  read(fd, mem, (n1 + 1) * (n2 + 1) * sizeof(float));
+  fread(&mem, (n1 + 1) * (n2 + 1) * sizeof(float), 1, file);
+
   for (i = 0; i <= n1; i++) {
     for (j = 0; j <= n2; j++) {
       fastcopy(&(new->input_weights[i][j]), &mem[memcnt], sizeof(float));
@@ -415,7 +421,8 @@ BPNN *bpnn_read(char *filename) {
 
   memcnt = 0;
   mem = (char *)malloc((unsigned)((n2 + 1) * (n3 + 1) * sizeof(float)));
-  read(fd, mem, (n2 + 1) * (n3 + 1) * sizeof(float));
+
+  fread(&mem, (n2 + 1) * (n3 + 1) * sizeof(float), 1, file);
   for (i = 0; i <= n2; i++) {
     for (j = 0; j <= n3; j++) {
       fastcopy(&(new->hidden_weights[i][j]), &mem[memcnt], sizeof(float));
@@ -423,7 +430,7 @@ BPNN *bpnn_read(char *filename) {
     }
   }
   free(mem);
-  close(fd);
+  fclose(file);
 
   printf("Done\n"); // fflush(stdout);
 
