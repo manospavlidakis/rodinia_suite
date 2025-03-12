@@ -21,4 +21,4 @@ imagenet.o: imagenet.c backprop.h
 
 
 clean:
-	rm -f *.o *~ backprop backprop_cuda.linkinfo *.csv
+	rm -f *.o *~ backprop backprop_cuda.linkinfo *.csv result.txt
