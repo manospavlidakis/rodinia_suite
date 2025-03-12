@@ -16,6 +16,7 @@ hip/lavaMD/kernel/kernel_gpu_cuda_wrapper.o
 */*/*.txt
 cuda/b+tree/b+tree
 */*/*/*.o
+*/*/*/*/*.o
 */*/*.o
 cuda/backprop/backprop
 cuda/cfd/cfd
