@@ -13,6 +13,8 @@
 // includes, kernels
 #include "backprop.h"
 #include "backprop_cuda_kernel.cu"
+#include "imagenet.h"
+
 #define WARMUP
 std::chrono::high_resolution_clock::time_point s_compute;
 std::chrono::high_resolution_clock::time_point e_compute;

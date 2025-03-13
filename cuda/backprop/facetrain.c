@@ -1,5 +1,4 @@
 
-
 #include "backprop.h"
 #include "imagenet.h"
 #include "omp.h"
