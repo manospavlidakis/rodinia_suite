@@ -191,6 +191,8 @@ int main(int argc, char *argv[]) {
   start_warmup = std::chrono::high_resolution_clock::now();
   double *warm;
   cudaMalloc((void **)&warm, sizeof(double) * 100000);
+  cudaStream_t stream;
+  cudaStreamCreateWithFlags(&stream, cudaStreamNonBlocking);
   cudaFree(warm);
   end_warmup = std::chrono::high_resolution_clock::now();
 #endif

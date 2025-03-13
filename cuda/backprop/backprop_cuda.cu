@@ -18,26 +18,6 @@ std::chrono::high_resolution_clock::time_point s_compute;
 std::chrono::high_resolution_clock::time_point e_compute;
 std::chrono::high_resolution_clock::time_point start_warmup;
 std::chrono::high_resolution_clock::time_point end_warmup;
-////////////////////////////////////////////////////////////////////////////////
-
-extern "C" void bpnn_layerforward(float *l1, float *l2, float **conn, int n1,
-                                  int n2);
-
-extern "C" void bpnn_output_error(float *delta, float *target, float *output,
-                                  int nj, float *err);
-
-extern "C" void bpnn_hidden_error(float *delta_h, int nh, float *delta_o,
-                                  int no, float **who, float *hidden,
-                                  float *err);
-
-extern "C" void bpnn_adjust_weights(float *delta, int ndelta, float *ly,
-                                    int nly, float **w, float **oldw);
-
-extern "C" int setup(int argc, char **argv);
-
-extern "C" float **alloc_2d_dbl(int m, int n);
-
-extern "C" float squash(float x);
 
 unsigned int num_threads = 0;
 unsigned int num_blocks = 0;
@@ -95,6 +75,8 @@ extern "C" void bpnn_train_cuda(BPNN *net, float *eo, float *eh) {
   // Warmup
   double *warm;
   cudaMalloc((void **)&warm, sizeof(double) * 100000);
+  cudaStream_t stream;
+  cudaStreamCreateWithFlags(&stream, cudaStreamNonBlocking);
   cudaFree(warm);
   end_warmup = std::chrono::high_resolution_clock::now();
 #endif

@@ -1,11 +1,11 @@
 
-#include <hip/hip_runtime.h>
 #include "./common.h"
 #include "./kernel/kernel_gpu_cuda_wrapper.h"
 #include "./kernel/kernel_gpu_cuda_wrapper_2.h"
 #include "./main.h"
 #include "./util/num/num.h"
 #include <chrono>
+#include <hip/hip_runtime.h>
 #include <iostream>
 #include <limits.h>
 #include <math.h>

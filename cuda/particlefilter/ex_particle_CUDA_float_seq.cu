@@ -1,4 +1,3 @@
-#include <tuple>
 #include <chrono>
 #include <fcntl.h>
 #include <float.h>
@@ -8,11 +7,12 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <tuple>
 #include <unistd.h>
 #define BLOCK_X 16
 #define BLOCK_Y 16
 #define PI 3.1415926535897932
-//#define DEBUG
+// #define DEBUG
 #define WARMUP
 #define INIT_TIME
 const int threads_per_block = 512;
@@ -71,8 +71,8 @@ void cuda_print_double_array(double *array_GPU, size_t size) {
  *(IK[IND] - 228)^2)/ 100 param 1 I 3D matrix param 2 current ind array param 3
  *length of ind array returns a double representing the sum
  ********************************/
-__forceinline__ __device__ double calcLikelihoodSum(unsigned char *I, int *ind, int numOnes,
-                                    int index) {
+__forceinline__ __device__ double calcLikelihoodSum(unsigned char *I, int *ind,
+                                                    int numOnes, int index) {
   double likelihoodSum = 0.0;
   int x;
   for (x = 0; x < numOnes; x++)
@@ -89,7 +89,8 @@ param1 CDF
 param2 weights
 param3 Nparticles
  *****************************/
-__forceinline__ __device__ void cdfCalc(double *CDF, double *weights, int Nparticles) {
+__forceinline__ __device__ void cdfCalc(double *CDF, double *weights,
+                                        int Nparticles) {
   int x;
   CDF[0] = weights[0];
   for (x = 1; x < Nparticles; x++) {
@@ -175,8 +176,8 @@ param1 weights
 param2 likelihood
 param3 Nparcitles
  ****************************/
-__forceinline__ __device__ double updateWeights(double *weights, double *likelihood,
-                                int Nparticles) {
+__forceinline__ __device__ double
+updateWeights(double *weights, double *likelihood, int Nparticles) {
   int x;
   double sum = 0;
   for (x = 0; x < Nparticles; x++) {
@@ -186,8 +187,8 @@ __forceinline__ __device__ double updateWeights(double *weights, double *likelih
   return sum;
 }
 
-__forceinline__ __device__ int findIndexBin(double *CDF, int beginIndex, int endIndex,
-                            double value) {
+__forceinline__ __device__ int findIndexBin(double *CDF, int beginIndex,
+                                            int endIndex, double value) {
   if (endIndex < beginIndex)
     return -1;
   int middleIndex;
@@ -664,8 +665,9 @@ int findIndex(double *CDF, int lengthCDF, double value) {
  * @param seed The seed array used for random number generation
  * @param Nparticles The number of particles to be used
  */
-std::tuple<double, double, double*, double*, double*> 
-particleFilter(unsigned char *I, int IszX, int IszY, int Nfr, int *seed, int Nparticles) {
+std::tuple<double, double, double *, double *, double *>
+particleFilter(unsigned char *I, int IszX, int IszY, int Nfr, int *seed,
+               int Nparticles) {
   int max_size = IszX * IszY * Nfr;
   // original particle centroid
   double xe = roundDouble(IszY / 2.0);
@@ -808,7 +810,7 @@ particleFilter(unsigned char *I, int IszX, int IszY, int Nfr, int *seed, int Npa
   check_error(cudaMemcpy(weights, weights_GPU, sizeof(double) * Nparticles,
                          cudaMemcpyDeviceToHost));
 
- // CUDA freeing of memory
+  // CUDA freeing of memory
   cudaFree(weights_GPU);
   cudaFree(arrayY_GPU);
   cudaFree(arrayX_GPU);
@@ -899,6 +901,9 @@ int main(int argc, char *argv[]) {
   // Warmup
   char *warm;
   cudaMalloc((void **)&warm, sizeof(char));
+  cudaStream_t stream;
+  cudaStreamCreateWithFlags(&stream, cudaStreamNonBlocking);
+  cudaFree(warm);
   end_warmup = std::chrono::high_resolution_clock::now();
 #endif
   s_compute = std::chrono::high_resolution_clock::now();
@@ -911,34 +916,34 @@ int main(int argc, char *argv[]) {
   auto result = particleFilter(I, IszX, IszY, Nfr, seed, Nparticles);
   double xe = std::get<0>(result);
   double ye = std::get<1>(result);
-  double* weights = std::get<2>(result);
-  double* arrayX  = std::get<3>(result);
-  double* arrayY  = std::get<4>(result);
+  double *weights = std::get<2>(result);
+  double *arrayX = std::get<3>(result);
+  double *arrayY = std::get<4>(result);
   e_compute = std::chrono::high_resolution_clock::now();
   auto end = std::chrono::high_resolution_clock::now();
 #ifdef OUTPUT
-    // Compute final object location
-    xe = 0;
-    ye = 0;
-    for (int x = 0; x < Nparticles; x++) {
-        xe += arrayX[x] * weights[x];
-        ye += arrayY[x] * weights[x];
-    }
+  // Compute final object location
+  xe = 0;
+  ye = 0;
+  for (int x = 0; x < Nparticles; x++) {
+    xe += arrayX[x] * weights[x];
+    ye += arrayY[x] * weights[x];
+  }
 
-    printf("XE: %lf\n", xe);
-    printf("YE: %lf\n", ye);
-    double distance = sqrt(pow((double)(xe - (int)roundDouble(IszY / 2.0)), 2) +
-                           pow((double)(ye - (int)roundDouble(IszX / 2.0)), 2));
+  printf("XE: %lf\n", xe);
+  printf("YE: %lf\n", ye);
+  double distance = sqrt(pow((double)(xe - (int)roundDouble(IszY / 2.0)), 2) +
+                         pow((double)(ye - (int)roundDouble(IszX / 2.0)), 2));
 
-    FILE *fid = fopen("result.txt", "w+");
-    if (fid == NULL) {
-        printf("The file was not opened for writing\n");
-        abort();
-    }
-    fprintf(fid, "XE: %lf\n", xe);
-    fprintf(fid, "YE: %lf\n", ye);
-    fprintf(fid, "distance: %lf\n", distance);
-    fclose(fid);
+  FILE *fid = fopen("result.txt", "w+");
+  if (fid == NULL) {
+    printf("The file was not opened for writing\n");
+    abort();
+  }
+  fprintf(fid, "XE: %lf\n", xe);
+  fprintf(fid, "YE: %lf\n", ye);
+  fprintf(fid, "distance: %lf\n", distance);
+  fclose(fid);
 #endif
   std::chrono::duration<double, std::milli> elapsed_milli_0 = end_0 - start_0;
   std::cerr << "Init time: " << elapsed_milli_0.count() << " ms" << std::endl;
@@ -955,8 +960,6 @@ int main(int argc, char *argv[]) {
       end_warmup - start_warmup;
   std::cerr << "Warmup time: " << elapsed_milli_warmup.count() << " ms"
             << std::endl;
-  // free warmup
-  cudaFree(warm);
 #endif
   free(seed);
   free(I);
