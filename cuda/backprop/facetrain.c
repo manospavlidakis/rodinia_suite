@@ -1,7 +1,6 @@
 
 #include "backprop.h"
 #include "imagenet.h"
-#include "omp.h"
 #include <cuda.h>
 #include <math.h>
 #include <stdio.h>
