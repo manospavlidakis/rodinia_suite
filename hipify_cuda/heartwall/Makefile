@@ -1,19 +1,16 @@
-
-ifdef OUTPUT
-override OUTPUT = -DOUTPUT
-endif
+CC = gcc
 
 # link objects(binaries) together
-heartwall: main.o ./AVI/avilib.o ./AVI/avimod.o 
-	nvcc main.o ./AVI/avilib.o ./AVI/avimod.o -I/usr/local/cuda/include -lm -o heartwall
+heartwall: main_hip.o ./AVI/avilib.o ./AVI/avimod.o 
+	hipcc -O3 $(CXXFLAGS)  main_hip.o ./AVI/avilib.o ./AVI/avimod.o  -lm -o heartwall
 
 # compile main function file into object (binary)
-main.o: main.cu kernel.cu define.c
-	nvcc $(OUTPUT) $(KERNEL_DIM) main.cu -I./AVI -c -O3
+main_hip.o: main_hip.cpp  define.c
+	hipcc -O3  $(CXXFLAGS) main_hip.cpp -I./AVI -c -O3
 
 ./AVI/avilib.o ./AVI/avimod.o:
 	cd AVI; make;
 
 # delete all object files
 clean:
-	rm -f *.o AVI/*.o heartwall *.linkinfo
+	rm -f *.o AVI/*.o heartwall *.linkinfo result.txt

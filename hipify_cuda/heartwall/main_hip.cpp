@@ -1,7 +1,7 @@
 #include "define.c"
 
-#include <AVI/avilib.h>
-#include <AVI/avimod.h>
+#include <avilib.h>
+#include <avimod.h>
 #include <chrono>
 #include <hip/hip_runtime.h>
 #include <iostream>
@@ -1152,7 +1152,7 @@ int main(int argc, char *argv[]) {
   common.endoRow[19] = 339;
   hipMalloc((void **)&common.d_endoRow, common.endo_mem);
   hipMemcpy(common.d_endoRow, common.endoRow, common.endo_mem,
-             hipMemcpyHostToDevice);
+            hipMemcpyHostToDevice);
 
   common.endoCol = (int *)malloc(common.endo_mem);
   common.endoCol[0] = 408;
@@ -1177,15 +1177,13 @@ int main(int argc, char *argv[]) {
   common.endoCol[19] = 411;
   hipMalloc((void **)&common.d_endoCol, common.endo_mem);
   hipMemcpy(common.d_endoCol, common.endoCol, common.endo_mem,
-             hipMemcpyHostToDevice);
+            hipMemcpyHostToDevice);
 
   common.tEndoRowLoc = (int *)malloc(common.endo_mem * common.no_frames);
-  hipMalloc((void **)&common.d_tEndoRowLoc,
-             common.endo_mem * common.no_frames);
+  hipMalloc((void **)&common.d_tEndoRowLoc, common.endo_mem * common.no_frames);
 
   common.tEndoColLoc = (int *)malloc(common.endo_mem * common.no_frames);
-  hipMalloc((void **)&common.d_tEndoColLoc,
-             common.endo_mem * common.no_frames);
+  hipMalloc((void **)&common.d_tEndoColLoc, common.endo_mem * common.no_frames);
 
   common.epiPoints = EPI_POINTS;
   common.epi_mem = sizeof(int) * common.epiPoints;
@@ -1224,7 +1222,7 @@ int main(int argc, char *argv[]) {
   common.epiRow[30] = 360;
   hipMalloc((void **)&common.d_epiRow, common.epi_mem);
   hipMemcpy(common.d_epiRow, common.epiRow, common.epi_mem,
-             hipMemcpyHostToDevice);
+            hipMemcpyHostToDevice);
 
   common.epiCol = (int *)malloc(common.epi_mem);
   common.epiCol[0] = 457;
@@ -1260,7 +1258,7 @@ int main(int argc, char *argv[]) {
   common.epiCol[30] = 455;
   hipMalloc((void **)&common.d_epiCol, common.epi_mem);
   hipMemcpy(common.d_epiCol, common.epiCol, common.epi_mem,
-             hipMemcpyHostToDevice);
+            hipMemcpyHostToDevice);
 
   common.tEpiRowLoc = (int *)malloc(common.epi_mem * common.no_frames);
   hipMalloc((void **)&common.d_tEpiRowLoc, common.epi_mem * common.no_frames);
@@ -1359,7 +1357,7 @@ int main(int argc, char *argv[]) {
   // pointers
   for (i = 0; i < common.allPoints; i++) {
     hipMalloc((void **)&unique[i].d_in2_pad_cumv_sel,
-               common.in2_pad_cumv_sel_mem);
+              common.in2_pad_cumv_sel_mem);
   }
   // common
   common.in2_pad_cumv_sel2_rowlow = 1;
@@ -1396,7 +1394,7 @@ int main(int argc, char *argv[]) {
   // pointers
   for (i = 0; i < common.allPoints; i++) {
     hipMalloc((void **)&unique[i].d_in2_sub_cumh_sel,
-               common.in2_sub_cumh_sel_mem);
+              common.in2_sub_cumh_sel_mem);
   }
 
   // common
@@ -1494,7 +1492,8 @@ int main(int argc, char *argv[]) {
   blocks.y = 1;
 
   hipMemcpyToSymbol(HIP_SYMBOL(d_common), &common, sizeof(params_common));
-  hipMemcpyToSymbol(HIP_SYMBOL(d_unique), &unique, sizeof(params_unique) * ALL_POINTS);
+  hipMemcpyToSymbol(HIP_SYMBOL(d_unique), &unique,
+                    sizeof(params_unique) * ALL_POINTS);
 
   for (common_change.frame_no = 0; common_change.frame_no < frames_processed;
        common_change.frame_no++) {
@@ -1509,9 +1508,9 @@ int main(int argc, char *argv[]) {
 
     // copy frame to GPU memory
     hipMemcpy(common_change.d_frame, frame, common.frame_mem,
-               hipMemcpyHostToDevice);
+              hipMemcpyHostToDevice);
     hipMemcpyToSymbol(HIP_SYMBOL(d_common_change), &common_change,
-                       sizeof(params_common_change));
+                      sizeof(params_common_change));
 
     // launch GPU kernel
     kernel<<<blocks, threads>>>();
@@ -1522,14 +1521,14 @@ int main(int argc, char *argv[]) {
   }
 
   hipMemcpy(common.tEndoRowLoc, common.d_tEndoRowLoc,
-             common.endo_mem * common.no_frames, hipMemcpyDeviceToHost);
+            common.endo_mem * common.no_frames, hipMemcpyDeviceToHost);
   hipMemcpy(common.tEndoColLoc, common.d_tEndoColLoc,
-             common.endo_mem * common.no_frames, hipMemcpyDeviceToHost);
+            common.endo_mem * common.no_frames, hipMemcpyDeviceToHost);
 
   hipMemcpy(common.tEpiRowLoc, common.d_tEpiRowLoc,
-             common.epi_mem * common.no_frames, hipMemcpyDeviceToHost);
+            common.epi_mem * common.no_frames, hipMemcpyDeviceToHost);
   hipMemcpy(common.tEpiColLoc, common.d_tEpiColLoc,
-             common.epi_mem * common.no_frames, hipMemcpyDeviceToHost);
+            common.epi_mem * common.no_frames, hipMemcpyDeviceToHost);
 
   // frame
   hipFree(common_change.d_frame);
