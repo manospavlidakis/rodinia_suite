@@ -3,11 +3,6 @@
 CUDA_INSTALL_PATH = $(CUDA_DIR)
 EXECUTABLE := dwt2d
 
-# Debug options
-dbg=0
-cudagdb=0 #compile for use with cuda-gdb, note that 'dbg' must be 1 as well
-performancetest=1
-
 # NVCC Options
 NVCCFLAGS += $(CXXFLAGS)
 
@@ -52,22 +47,10 @@ CWARN_FLAGS := $(CXXWARN_FLAGS) \
 CFLAGS += $(CWARN_FLAGS)
 CXXFLAGS += $(CXXWARN_FLAGS)
 
-# Debug/release flags
-ifeq ($(dbg),1)
-    COMMONFLAGS += -g 
-    NVCCFLAGS   += -D_DEBUG
-    CXXFLAGS    += -D_DEBUG
-    CFLAGS      += -D_DEBUG
-
-    ifeq ($(cudagdb),1)
-        NVCCFLAGS += -G
-    endif
-else 
-    COMMONFLAGS += -O2 
-    NVCCFLAGS   += --compiler-options -fno-strict-aliasing
-    CXXFLAGS    += -fno-strict-aliasing
-    CFLAGS      += -fno-strict-aliasing
-endif
+COMMONFLAGS += -O3
+NVCCFLAGS   += --compiler-options -fno-strict-aliasing
+CXXFLAGS    += -fno-strict-aliasing
+CFLAGS      += -fno-strict-aliasing
 
 #ifeq ($(performancetest),1)
 #    COMMONFLAGS += -DGPU_DWT_TESTING
