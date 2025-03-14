@@ -8,7 +8,23 @@
 #include <math.h>
 #include <stdlib.h>
 #include <string.h>
-params_common_change common_change;
+#define BREAKDOWNS
+#define WARMUP
+std::chrono::high_resolution_clock::time_point s_compute;
+std::chrono::high_resolution_clock::time_point e_compute;
+std::chrono::high_resolution_clock::time_point start_warmup;
+std::chrono::high_resolution_clock::time_point end_warmup;
+
+#ifdef BREAKDOWNS
+std::chrono::high_resolution_clock::time_point s_b0;
+std::chrono::high_resolution_clock::time_point e_b0;
+std::chrono::high_resolution_clock::time_point s_b1;
+std::chrono::high_resolution_clock::time_point e_b1;
+std::chrono::high_resolution_clock::time_point s_b2;
+std::chrono::high_resolution_clock::time_point e_b2;
+std::chrono::high_resolution_clock::time_point s_b3;
+std::chrono::high_resolution_clock::time_point e_b3;
+#endif
 __constant__ params_common_change d_common_change;
 
 params_common common;
@@ -1012,12 +1028,6 @@ __global__ void kernel() {
   }
 }
 
-#define WARMUP
-std::chrono::high_resolution_clock::time_point s_compute;
-std::chrono::high_resolution_clock::time_point e_compute;
-std::chrono::high_resolution_clock::time_point start_warmup;
-std::chrono::high_resolution_clock::time_point end_warmup;
-
 void write_data(char *filename, int frameNo, int frames_processed,
                 int endoPoints, int *input_a, int *input_b, int epiPoints,
                 int *input_2a, int *input_2b) {
@@ -1110,6 +1120,9 @@ int main(int argc, char *argv[]) {
   end_warmup = std::chrono::high_resolution_clock::now();
 #endif
   s_compute = std::chrono::high_resolution_clock::now();
+#ifdef BREAKDOWNS
+  s_b0 = std::chrono::high_resolution_clock::now();
+#endif
   // pointers
   hipMalloc((void **)&common_change.d_frame, common.frame_mem);
 
@@ -1494,7 +1507,11 @@ int main(int argc, char *argv[]) {
   hipMemcpyToSymbol(HIP_SYMBOL(d_common), &common, sizeof(params_common));
   hipMemcpyToSymbol(HIP_SYMBOL(d_unique), &unique,
                     sizeof(params_unique) * ALL_POINTS);
-
+#ifdef BREAKDOWNS
+  hipDeviceSynchronize();
+  e_b0 = std::chrono::high_resolution_clock::now();
+  s_b1 = std::chrono::high_resolution_clock::now();
+#endif
   for (common_change.frame_no = 0; common_change.frame_no < frames_processed;
        common_change.frame_no++) {
 
@@ -1519,7 +1536,10 @@ int main(int argc, char *argv[]) {
     // for every frame fetched
     free(frame);
   }
-
+#ifdef BREAKDOWNS
+  e_b1 = std::chrono::high_resolution_clock::now();
+  s_b2 = std::chrono::high_resolution_clock::now();
+#endif
   hipMemcpy(common.tEndoRowLoc, common.d_tEndoRowLoc,
             common.endo_mem * common.no_frames, hipMemcpyDeviceToHost);
   hipMemcpy(common.tEndoColLoc, common.d_tEndoColLoc,
@@ -1559,6 +1579,10 @@ int main(int argc, char *argv[]) {
     hipFree(unique[i].d_tMask);
     hipFree(unique[i].d_mask_conv);
   }
+#ifdef BREAKDOWNS
+  hipDeviceSynchronize();
+  e_b2 = std::chrono::high_resolution_clock::now();
+#endif
   e_compute = std::chrono::high_resolution_clock::now();
   std::chrono::duration<double, std::milli> compute_milli =
       e_compute - s_compute;
@@ -1585,4 +1609,16 @@ int main(int argc, char *argv[]) {
   auto end_all = std::chrono::high_resolution_clock::now();
   std::chrono::duration<double, std::milli> elapsed_milli = end_all - start_all;
   std::cerr << "Elapsed time: " << elapsed_milli.count() << " ms" << std::endl;
+#ifdef BREAKDOWNS
+  std::cerr << " ##### Breakdown Computation #####" << std::endl;
+  std::chrono::duration<double, std::milli> allocation = e_b0 - s_b0;
+  std::cerr << "Allocation-Transfer time: " << allocation.count() << " ms"
+            << std::endl;
+  std::chrono::duration<double, std::milli> transfer = e_b1 - s_b1;
+  std::cerr << "Compute time: " << transfer.count() << " ms" << std::endl;
+  std::chrono::duration<double, std::milli> compute = e_b2 - s_b2;
+  std::cerr << "Transfer back-Free time: " << compute.count() << " ms"
+            << std::endl;
+  std::cerr << " #################################" << std::endl;
+#endif
 }
