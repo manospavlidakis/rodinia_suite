@@ -4,7 +4,7 @@ INCLUDE := $(CUDA_DIR)/include
 
 # link objects(binaries) together
 heartwall: main.o ./AVI/avilib.o ./AVI/avimod.o 
-	$(CC) $(CXXFLAGS) main.o ./AVI/avilib.o ./AVI/avimod.o -lm -o heartwall -I$(INCLUDE) -L$(CUDA_LIB_DIR) 
+	$(CC) $(CXXFLAGS) -O3 main.o ./AVI/avilib.o ./AVI/avimod.o -lm -o heartwall -I$(INCLUDE) -L$(CUDA_LIB_DIR) 
 
 # compile main function file into object (binary)
 main.o: main.cu kernel.cu define.c
