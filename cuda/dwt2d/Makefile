@@ -105,5 +105,4 @@ $(EXECUTABLE): $(COBJS) $(CXXOBJS) $(CUOBJS)
 	$(NVCC) -o $(EXECUTABLE) $(COBJS) $(CXXOBJS) $(CUOBJS) $(LDFLAGS)
 
 clean:
-	rm -f $(COBJS) $(CXXOBJS) $(CUOBJS) $(EXECUTABLE)
-	#rm *.bmp.dwt.*		
+	rm -f $(COBJS) $(CXXOBJS) $(CUOBJS) $(EXECUTABLE)rm *.bmp.dwt.* *.csv
