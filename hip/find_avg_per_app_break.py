@@ -15,7 +15,6 @@ benchmark = sys.argv[1]
 
 # Directory to save the result files
 output_dir = "."
-# os.makedirs(output_dir, exist_ok=True)
 
 # File pattern to match any directory and filenames ending with _{benchmark}.csv
 file_pattern = f"**/*_{benchmark}.csv"
@@ -26,8 +25,11 @@ if not csv_files:
     print(f"No files found for benchmark '{benchmark}'. Exiting...")
     sys.exit(1)
 
-# Metrics of interest
-metrics_of_interest = ["Allocation time", "Transfer time", "Compute time", "Transfer Back time"]
+# Determine metrics of interest based on the benchmark
+if benchmark == "heartwall":
+    metrics_of_interest = ["Allocation-Transfer time", "Compute time", "Transfer back-Free time"]
+else:
+    metrics_of_interest = ["Allocation time", "Transfer time", "Compute time", "Transfer Back time"]
 
 # Initialize a dictionary to collect values for each metric
 data = {metric: [] for metric in metrics_of_interest}
@@ -55,4 +57,3 @@ stats_df = pd.DataFrame(list(average_stats.items()), columns=["Metric", "Average
 stats_df.to_csv(output_file, index=False)
 
 print(f"Saved average values to {output_file}")
-
