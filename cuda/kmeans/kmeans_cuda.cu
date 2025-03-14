@@ -15,7 +15,6 @@
 #include "kmeans_cuda.h"
 #include "kmeans_cuda_kernel.cu"
 
-
 // #define BLOCK_DELTA_REDUCE
 // #define BLOCK_CENTER_REDUCE
 
@@ -48,8 +47,8 @@ int *block_deltas_d;      /* per block calculation of deltas */
 /* -------------- allocateMemory() ------------------- */
 /* allocate device memory, calculate number of blocks and threads, and invert
  * the data array */
-extern "C" void allocateMemory(int npoints, int nfeatures, int nclusters,
-                               float **features) {
+extern "C" ` allocateMemory(int npoints, int nfeatures, int nclusters,
+                            float **features) {
   num_blocks = npoints / num_threads;
   if (npoints % num_threads > 0) /* defeat truncation */
     num_blocks++;
