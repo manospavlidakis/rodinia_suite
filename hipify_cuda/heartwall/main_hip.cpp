@@ -25,6 +25,7 @@ std::chrono::high_resolution_clock::time_point e_b2;
 std::chrono::high_resolution_clock::time_point s_b3;
 std::chrono::high_resolution_clock::time_point e_b3;
 #endif
+params_common_change common_change;
 __constant__ params_common_change d_common_change;
 
 params_common common;
