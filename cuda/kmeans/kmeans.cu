@@ -309,7 +309,7 @@ int setup(int argc, char **argv) {
   e_compute = std::chrono::high_resolution_clock::now();
 #ifdef OUTPUT
   if (min_nclusters == max_nclusters) {
-    FILE *fp = fopen("nat_result.txt", "w"); // Open the file for writing
+    FILE *fp = fopen("result.txt", "w"); // Open the file for writing
     if (fp == NULL) {
       fprintf(stderr, "Failed to open file for writing.\n");
       abort();
