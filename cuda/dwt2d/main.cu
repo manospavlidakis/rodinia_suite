@@ -369,7 +369,7 @@ int main(int argc, char **argv) {
     printf("Device %d does not support CUDA\n", device);
     return -1;
   }
-  printf("Using device %d: %s\n", device, devProp.name);
+  // printf("Using device %d: %s\n", device, devProp.name);
   cudaSetDevice(device);
   cudaCheckError("Set selected device");
 
