@@ -21,3 +21,12 @@ cuda/b+tree/b+tree
 cuda/backprop/backprop
 cuda/cfd/cfd
 hipify_cuda/b+tree/b+tree
+cuda/dwt2d/rgb.bmp.dwt.g
+cuda/dwt2d/rgb.bmp.dwt.r
+cuda/dwt2d/rgb.bmp.dwt.b
+cuda/heartwall/heartwall 
+hipify_cuda/backprop/backprop
+hipify_cuda/cfd/cfd
+hipify_cuda/heartwall/heartwall
+cuda/dwt2d/dwt2d
+
