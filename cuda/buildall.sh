@@ -34,17 +34,11 @@ dir=$(dirname "$mf")
     dir_name=$(basename "$dir")
 
     # Check if the directory is one of the unsupported ones
-    if [ "$SPECTRAL" = "true" ]; then
-        if [ "$dir_name" = "kmeans" ] || [ "$dir_name" = "hybridsort" ]; then
-            echo "Kmeans and hybridsort are not supported by SCALE due to texture issues."
-        else
-            make clean
-            make -j CUDA_DIR="$CUDA_DIR" GENCODE_FLAGS="$GENCODE_FLAGS" CXXFLAGS="$CXXFLAGS" CUDA_LIB_DIR="$CUDA_LIB_DIR"
-        fi
+    if [ "$dir_name" = "kmeans" ] || [ "$dir_name" = "hybridsort" ]; then
+        echo "Kmeans and hybridsort are not supported by SCALE due to texture issues."
     else
-        # If SPECTRAL is not true, just clean and make
         make clean
         make -j CUDA_DIR="$CUDA_DIR" GENCODE_FLAGS="$GENCODE_FLAGS" CXXFLAGS="$CXXFLAGS" CUDA_LIB_DIR="$CUDA_LIB_DIR"
-    fi
-     cd - > /dev/null     
+    fi  
+    cd - > /dev/null              
 done    
