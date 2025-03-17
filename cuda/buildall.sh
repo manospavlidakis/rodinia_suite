@@ -25,12 +25,26 @@ CXXFLAGS+=" -DOUTPUT"
 #CXXFLAGS+=" -DBREAKDOWNS
 
 for mf in `find -name 'Makefile'`; do                                                               
-    cd `dirname $mf`
-    if [ "$dir_name" = "kmeans" ] || [ "$dir_name" = "hybridsort" ]; then
-	    echo "Kmeans and hybridsot are not supported from SCALE due to texture. "
-   else
-    make clean                                                                                      
-    make -j CUDA_DIR="$CUDA_DIR" GENCODE_FLAGS="$GENCODE_FLAGS" CXXFLAGS="$CXXFLAGS" CUDA_LIB_DIR="$CUDA_LIB_DIR"
-    cd -                   
-   fi
+dir=$(dirname "$mf")
+    
+    # Enter the directory
+    cd "$dir" || exit  # Exit if cd fails, for safety
+
+    # Extract just the directory base name for comparison
+    dir_name=$(basename "$dir")
+
+    # Check if the directory is one of the unsupported ones
+    if [ "$SPECTRAL" = "true" ]; then
+        if [ "$dir_name" = "kmeans" ] || [ "$dir_name" = "hybridsort" ]; then
+            echo "Kmeans and hybridsort are not supported by SCALE due to texture issues."
+        else
+            make clean
+            make -j CUDA_DIR="$CUDA_DIR" GENCODE_FLAGS="$GENCODE_FLAGS" CXXFLAGS="$CXXFLAGS" CUDA_LIB_DIR="$CUDA_LIB_DIR"
+        fi
+    else
+        # If SPECTRAL is not true, just clean and make
+        make clean
+        make -j CUDA_DIR="$CUDA_DIR" GENCODE_FLAGS="$GENCODE_FLAGS" CXXFLAGS="$CXXFLAGS" CUDA_LIB_DIR="$CUDA_LIB_DIR"
+    fi
+     cd - > /dev/null     
 done    
