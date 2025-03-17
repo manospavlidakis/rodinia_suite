@@ -685,7 +685,7 @@ int main(int argc, char **argv) {
   dealloc<float>(fluxes);
   dealloc<float>(step_factors);
 #ifdef BREAKDOWNS
-  cudaDeviceSynchronize();
+  hipDeviceSynchronize();
   e_b5 = std::chrono::high_resolution_clock::now(); // cleanup
 #endif
   auto end_all = std::chrono::high_resolution_clock::now();
