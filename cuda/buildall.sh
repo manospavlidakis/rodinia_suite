@@ -25,8 +25,12 @@ CXXFLAGS+=" -DOUTPUT"
 #CXXFLAGS+=" -DBREAKDOWNS
 
 for mf in `find -name 'Makefile'`; do                                                               
-    cd `dirname $mf`                                                                                
+    cd `dirname $mf`
+    if [ "$dir_name" = "kmeans" ] || [ "$dir_name" = "hybridsort" ]; then
+	    echo "Kmeans and hybridsot are not supported from SCALE due to texture. "
+   else
     make clean                                                                                      
     make -j CUDA_DIR="$CUDA_DIR" GENCODE_FLAGS="$GENCODE_FLAGS" CXXFLAGS="$CXXFLAGS" CUDA_LIB_DIR="$CUDA_LIB_DIR"
     cd -                   
+   fi
 done    
