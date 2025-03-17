@@ -28,6 +28,8 @@ if not csv_files:
 # Determine metrics of interest based on the benchmark
 if benchmark == "heartwall":
     metrics_of_interest = ["Allocation-Transfer time", "Compute time", "Transfer back-Free time"]
+elif benchmark == "cfd":
+    metrics_of_interest = ["Compute_flux", "Memcpy2Symbol", "Alloc_Memcpy", "Init_Memset", "Compute", "Free"]
 else:
     metrics_of_interest = ["Allocation time", "Transfer time", "Compute time", "Transfer Back time"]
 
