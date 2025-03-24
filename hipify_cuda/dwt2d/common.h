@@ -1,16 +1,16 @@
-/*
+/* 
  * Copyright (c) 2009, Jiri Matela
  * All rights reserved.
- *
+ * 
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
- *
+ * 
  *     * Redistributions of source code must retain the above copyright
  *       notice, this list of conditions and the following disclaimer.
  *     * Redistributions in binary form must reproduce the above copyright
  *       notice, this list of conditions and the following disclaimer in the
  *       documentation and/or other materials provided with the distribution.
- *
+ * 
  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
  * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
@@ -27,37 +27,36 @@
 #ifndef _COMMON_H
 #define _COMMON_H
 
-// 24-bit multiplication is faster on G80,
-// but we must be sure to multiply integers
-// only within [-8M, 8M - 1] range
+//24-bit multiplication is faster on G80,
+//but we must be sure to multiply integers
+//only within [-8M, 8M - 1] range
 #define IMUL(a, b) __mul24(a, b)
 
 ////cuda timing macros
-// #define CTIMERINIT   cudaEvent_t cstart, cstop; \
+//#define CTIMERINIT  cudaEvent_t cstart, cstop; \
 //                    cudaEventCreate(&cstart); \
 //                    cudaEventCreate(&cstop); \
 //                    float elapsedTime
-// #define CTIMERSTART(cstart) cudaEventRecord(cstart,0)
-// #define CTIMERSTOP(cstop)  cudaEventRecord(cstop,0); \
+//#define CTIMERSTART(cstart) cudaEventRecord(cstart,0)
+//#define CTIMERSTOP(cstop) cudaEventRecord(cstop,0); \
 //                          cudaEventSynchronize(cstop); \
 //                          cudaEventElapsedTime(&elapsedTime, cstart, cstop)
 
-// divide and round up macro
+//divide and round up macro
 #define DIVANDRND(a, b) ((((a) % (b)) != 0) ? ((a) / (b) + 1) : ((a) / (b)))
 
-#define hipCheckError(msg)                                                     \
-  {                                                                            \
-    hipError_t err = hipGetLastError();                                        \
-    if (hipSuccess != err) {                                                   \
-      fprintf(stderr, "%s: %i: %s.\n", __FILE__, __LINE__, msg);               \
-      exit(-1);                                                                \
-    }                                                                          \
-  }
+#  define cudaCheckError( msg ) {                                            \
+    hipError_t err = hipGetLastError();                                    \
+    if( hipSuccess != err) {                                                \
+        fprintf(stderr, "%s: %i: %s: %s.\n",                                 \
+                __FILE__, __LINE__, msg, hipGetErrorString( err) );         \
+        exit(-1);                                                            \
+    } }
 
-#define hipCheckAsyncError(msg)                                                \
-  {                                                                            \
-    hipDeviceSynchronize();                                                    \
-    hipCheckError(msg);                                                        \
-  }
+#  define cudaCheckAsyncError( msg ) {                                       \
+    hipDeviceSynchronize();                                                 \
+    cudaCheckError( msg );                                                   \
+    }
+
 
 #endif
