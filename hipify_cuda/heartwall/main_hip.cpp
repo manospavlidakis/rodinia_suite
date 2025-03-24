@@ -8,7 +8,7 @@
 #include <math.h>
 #include <stdlib.h>
 #include <string.h>
-#define BREAKDOWNS
+//#define BREAKDOWNS
 #define WARMUP
 std::chrono::high_resolution_clock::time_point s_compute;
 std::chrono::high_resolution_clock::time_point e_compute;
