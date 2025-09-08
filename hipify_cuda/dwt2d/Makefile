@@ -1,82 +1,41 @@
-#Configure
-#CUDA_INSTALL_PATH ?= /usr/local/cuda
-#CUDA_INSTALL_PATH = $(CUDA_DIR)
+# ---- dwt2d (HIP) ----
+
 EXECUTABLE := dwt2d
 
+# Sources
+HIP_SRCS := \
+  main_hip.cpp \
+  dwt_hip.cpp \
+  components_hip.cpp \
+  dwt_cuda/fdwt53_hip.cpp \
+  dwt_cuda/fdwt97_hip.cpp \
+  dwt_cuda/common_hip.cpp \
+  dwt_cuda/rdwt97_hip.cpp \
+  dwt_cuda/rdwt53_hip.cpp
 
-# Files
-CFILES := 
-CXXFILES := 
-CUFILES := main_hip.cpp dwt_hip.cpp components_hip.cpp dwt_cuda/fdwt53_hip.cpp dwt_cuda/fdwt97_hip.cpp dwt_cuda/common_hip.cpp dwt_cuda/rdwt97_hip.cpp dwt_cuda/rdwt53_hip.cpp
-
-# Includes
 INCLUDES := -I.
 
-# Common flags
-COMMONFLAGS += $(INCLUDES)
-NVCCFLAGS += $(COMMONFLAGS)
-CXXFLAGS += $(COMMONFLAGS)
-CFLAGS += $(COMMONFLAGS) -std=c99  
-#LDFLAGS += -L$(CUDA_INSTALL_PATH)/lib64
+# Compiler/linker
+CXX      := hipcc
+CXXFLAGS := -O3 -fno-strict-aliasing $(INCLUDES) \
+            -W -Wall -Wimplicit -Wswitch -Wformat -Wchar-subscripts \
+            -Wparentheses -Wmultichar -Wtrigraphs -Wpointer-arith \
+            -Wcast-align -Wreturn-type -Wno-unused-function
+LDFLAGS  :=
 
-# Warning flags (from cuda common.mk)
-CXXWARN_FLAGS := \
-	-W -Wall \
-	-Wimplicit \
-	-Wswitch \
-	-Wformat \
-	-Wchar-subscripts \
-	-Wparentheses \
-	-Wmultichar \
-	-Wtrigraphs \
-	-Wpointer-arith \
-	-Wcast-align \
-	-Wreturn-type \
-	-Wno-unused-function \
-	$(SPACE)
+OBJS := $(HIP_SRCS:.cpp=.o)
 
-CWARN_FLAGS := $(CXXWARN_FLAGS) \
-	-Wstrict-prototypes \
-	-Wmissing-prototypes \
-	-Wmissing-declarations \
-	-Wnested-externs \
-	-Wmain \
+.PHONY: all clean
 
-CFLAGS += $(CWARN_FLAGS)
-CXXFLAGS += $(CXXWARN_FLAGS)
+all: $(EXECUTABLE)
 
-COMMONFLAGS += -O3
-NVCCFLAGS   += --compiler-options -fno-strict-aliasing
-CXXFLAGS    += -fno-strict-aliasing
-CFLAGS      += -fno-strict-aliasing
+$(EXECUTABLE): $(OBJS)
+	$(CXX) -o $@ $^ $(LDFLAGS)
 
-OUTPUT = -DOUTPUT
-
-# Compilers
-CXX := g++
-CC := gcc
-LINK := g++ -fPIC
-NVCC := hipcc
-
-# Generate object files list
-COBJS=$(CFILES:.c=.c.o)
-CXXOBJS=$(CXXFILES:.cpp=.cpp.o)
-CUOBJS=$(CUFILES:.cu=.cu.o)
-
-.SUFFIXES: .c.o .cpp.o .cu.o .cu 
-
-%.c.o: %.c
-	$(CC) $(CFLAGS) -c $< -o $@
-
-%.cu.o: %.cu
-	$(NVCC) $(OUTPUT) $(NVCCFLAGS) -c $< -o $@
-
-%.cpp.o: %.cpp
+%.o: %.cpp
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
-$(EXECUTABLE): $(COBJS) $(CXXOBJS) $(CUOBJS) 
-	$(NVCC) -o $(EXECUTABLE) $(COBJS) $(CXXOBJS) $(CUOBJS) $(LDFLAGS)
-
 clean:
-	rm -f $(COBJS) $(CXXOBJS) $(CUOBJS) $(EXECUTABLE)
-	rm *.bmp.dwt.* *.csv
+	rm -f $(OBJS) $(EXECUTABLE)
+	rm -f *.bmp.dwt.* *.csv
+
