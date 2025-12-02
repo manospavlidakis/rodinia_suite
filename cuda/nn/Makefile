@@ -1,5 +1,3 @@
-#include ../../common/make.config
-
 INCLUDE := $(CUDA_DIR)/include
 
 COMPILER_PATH := /usr/bin
@@ -17,7 +15,7 @@ NVCC       := $(CUDA_DIR)/bin/nvcc
 all : nn hurricane_gen
 
 clean :
-	rm -rf *.o nn hurricane_gen 2048_*_nn.csv result.txt
+	@rm -rf *.o nn hurricane_gen 2048_*_nn.csv result.txt
 
 nn : nn_cuda.cu
 	$(NVCC) $(CXXFLAGS) $(KERNEL_DIM) $(GENCODE_FLAGS) -o $@ $<

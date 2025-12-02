@@ -13,7 +13,7 @@ SRC = hotspot.cu
 EXE = hotspot
 
 release: $(SRC)
-	$(CC) $(CXXFLAGS) $(KERNEL_DIM) $(SRC) $(GENCODE_FLAGS) -o $(EXE) -I$(INCLUDE) -L$(CUDA_LIB_DIR) 
+	$(CC) $(CXXFLAGS) $(KERNEL_DIM) $(SRC) $(GENCODE_FLAGS) -o $(EXE) -I$(INCLUDE) -L$(CUDA_LIB_DIR)
 
 clean: $(SRC)
-	rm -f $(EXE) $(EXE).linkinfo result.txt *.csv 1024_*  output
+	@rm -f $(EXE) $(EXE).linkinfo result.txt *.csv 1024_*  output

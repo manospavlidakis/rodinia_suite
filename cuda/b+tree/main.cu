@@ -1,4 +1,5 @@
 #include "./common.h"
+#include "../../common/util.h"
 #include "./kernel/kernel_gpu_cuda_wrapper.h"
 #include "./kernel/kernel_gpu_cuda_wrapper_2.h"
 #include "./main.h"
@@ -16,6 +17,7 @@ std::chrono::high_resolution_clock::time_point s_compute2;
 std::chrono::high_resolution_clock::time_point e_compute2;
 std::chrono::high_resolution_clock::time_point start_warmup;
 std::chrono::high_resolution_clock::time_point end_warmup;
+
 #define WARMUP
 // general variables
 knode *knodes;
@@ -493,11 +495,13 @@ long transform_to_cuda(node *root, bool verbose) {
   if (verbose) {
     for (i = 0; i < size; i++)
       printf("%d ", krecords[i].value);
-    printf("\nNumber of records = %d, sizeof(record)=%d, total=%d\n", size,
-           sizeof(record), size * sizeof(record));
-    printf("Number of knodes = %d, sizeof(knode)=%d, total=%d\n", nodeindex,
-           sizeof(knode), (nodeindex) * sizeof(knode));
-    printf("\nDone Transformation. Mem used: %d\n", mem_used);
+    printf("\nNumber of records = %ld, sizeof(record)=%zu, total=%zu\n",
+       size, sizeof(record), (size_t)size * sizeof(record));
+
+    printf("Number of knodes = %ld, sizeof(knode)=%zu, total=%zu\n",
+       nodeindex, sizeof(knode), (size_t)nodeindex * sizeof(knode));
+
+    printf("\nDone Transformation. Mem used: %ld\n", mem_used);
   }
   return mem_used;
 }
@@ -671,10 +675,10 @@ void print_tree(node *root) {
       }
     }
     if (verbose_output)
-      printf("(%x)", n);
+      printf("(%p)", (void*)n);
     for (i = 0; i < n->num_keys; i++) {
       if (verbose_output)
-        printf("%x ", n->pointers[i]);
+        printf("%p ", n->pointers[i]);
       printf("%d ", n->keys[i]);
     }
     if (!n->is_leaf)
@@ -682,9 +686,9 @@ void print_tree(node *root) {
         enqueue((node *)n->pointers[i]);
     if (verbose_output) {
       if (n->is_leaf)
-        printf("%x ", n->pointers[order - 1]);
+        printf("%p ", n->pointers[order - 1]);
       else
-        printf("%x ", n->pointers[n->num_keys]);
+        printf("%p ", n->pointers[n->num_keys]);
     }
     printf("| ");
   }
@@ -1580,7 +1584,7 @@ int main(int argc, char **argv) {
   rewind(commandFile);
 
   // allocate memory to contain the whole file:
-  commandBuffer = (char *)malloc(sizeof(char) * lSize);
+  commandBuffer = (char*)malloc(lSize + 1);
   if (commandBuffer == NULL) {
     fputs("Command Buffer memory error", stderr);
     exit(2);
@@ -1592,7 +1596,7 @@ int main(int argc, char **argv) {
     fputs("Command file reading error", stderr);
     exit(3);
   }
-
+  commandBuffer[lSize] = '\0';
   // terminate
   fclose(commandFile);
 
@@ -1622,12 +1626,12 @@ int main(int argc, char **argv) {
     }
 
     // get # of numbers in the file
-    fscanf(file_pointer, "%d\n", &input);
+    FSCANF_CHECK1(file_pointer, "%d", &input);
     size = input;
 
     // save all numbers
     while (!feof(file_pointer)) {
-      fscanf(file_pointer, "%d\n", &input);
+      if (fscanf(file_pointer, "%d", &input) != 1) break;
       root = insert(root, input, input);
     }
 
@@ -1649,316 +1653,316 @@ int main(int argc, char **argv) {
   while (sscanf(commandPointer, "%c", &instruction) != EOF) {
     commandPointer++;
     switch (instruction) {
-
-    case 'i': {
-      scanf("%d", &input);
-      while (getchar() != (int)'\n')
-        ;
-      root = insert(root, input, input);
-      print_tree(root);
-      break;
-    }
-
-    case 'f': {
-    }
-
-    case 'p': {
-      scanf("%d", &input);
-      while (getchar() != (int)'\n')
-        ;
-      r = find(root, input, instruction == 'p');
-      if (r == NULL)
-        printf("Record not found under key %d.\n", input);
-      else
-        printf("Record found: %d\n", r->value);
-      break;
-    }
-
-    case 'd': {
-      scanf("%d", &input);
-      while (getchar() != (int)'\n')
-        ;
-      root = (node *)deleteVal(root, input);
-      print_tree(root);
-      break;
-    }
-
-    case 'x': {
-      while (getchar() != (int)'\n')
-        ;
-      root = destroy_tree(root);
-      print_tree(root);
-      break;
-    }
-
-    case 'l': {
-      while (getchar() != (int)'\n')
-        ;
-      print_leaves(root);
-      break;
-    }
-
-    case 't': {
-      while (getchar() != (int)'\n')
-        ;
-      print_tree(root);
-      break;
-    }
-
-    case 'v': {
-      while (getchar() != (int)'\n')
-        ;
-      verbose_output = !verbose_output;
-      break;
-    }
-
-    case 'q': {
-      while (getchar() != (int)'\n')
-        ;
-      return EXIT_SUCCESS;
-    }
-
-    case 'k': {
-
-      // get # of queries from user
-      int count;
-      sscanf(commandPointer, "%d", &count);
-      while (*commandPointer != 32 && *commandPointer != '\n')
-        commandPointer++;
-
-      // printf("\n ******command: k count=%d \n", count);
-      if (count > 65535) {
-        printf("ERROR: Number of requested querries should be 65,535 at most. "
-               "(limited by # of CUDA blocks)\n");
-        exit(0);
+      case 'i': {
+        SCANF_CHECKN(1, "%d", &input);;
+        while (getchar() != (int)'\n')
+          ;
+        root = insert(root, input, input);
+        print_tree(root);
+        break;
       }
 
-      // INPUT: records CPU allocation (setting pointer in mem variable)
-      record *records = (record *)mem;
-      long records_mem = (long)rootLoc;
-      // printf("records_elem=%d, records_unit_mem=%d, records_mem=%d\n",
-      //        (int)records_elem, (int)sizeof(record), (int)records_mem);
-
-      // INPUT: knodes CPU allocation (setting pointer in mem variable)
-      knode *knodes = (knode *)((long)mem + (long)rootLoc);
-      long knodes_elem = ((long)(mem_used) - (long)rootLoc) / sizeof(knode);
-      long knodes_mem = (long)(mem_used) - (long)rootLoc;
-      // printf("knodes_elem=%d, knodes_unit_mem=%d, knodes_mem=%d\n",
-      //        (int)knodes_elem, (int)sizeof(knode), (int)knodes_mem);
-
-      // INPUT: currKnode CPU allocation
-      long *currKnode;
-      currKnode = (long *)malloc(count * sizeof(long));
-      // INPUT: offset CPU initialization
-      memset(currKnode, 0, count * sizeof(long));
-
-      // INPUT: offset CPU allocation
-      long *offset;
-      offset = (long *)malloc(count * sizeof(long));
-      // INPUT: offset CPU initialization
-      memset(offset, 0, count * sizeof(long));
-
-      // INPUT: keys CPU allocation
-      int *keys;
-      keys = (int *)malloc(count * sizeof(int));
-      // INPUT: keys CPU initialization
-      int i;
-      for (i = 0; i < count; i++) {
-        keys[i] = (rand() / (float)RAND_MAX) * size;
+      case 'f': {
       }
 
-      // OUTPUT: ans CPU allocation
-      record *ans = (record *)malloc(sizeof(record) * count);
-      // OUTPUT: ans CPU initialization
-      for (i = 0; i < count; i++) {
-        ans[i].value = -1;
-      }
-      // printf("1. kernel_gpu_cuda_wrapper\n");
-      s_compute = std::chrono::high_resolution_clock::now();
-      // CUDA kernel
-      kernel_gpu_cuda_wrapper(records, records_mem, knodes, knodes_elem,
-                              knodes_mem,
-
-                              order, maxheight, count,
-
-                              currKnode, offset, keys, ans);
-      e_compute = std::chrono::high_resolution_clock::now();
-      pFile = fopen(output, "aw+");
-      if (pFile == NULL) {
-        fprintf(stderr, "Fail to open %s!\n", output);
+      case 'p': {
+        SCANF_CHECKN(1, "%d", &input);;
+        while (getchar() != (int)'\n')
+          ;
+        r = find(root, input, instruction == 'p');
+        if (r == NULL)
+          printf("Record not found under key %d.\n", input);
+        else
+          printf("Record found: %d\n", r->value);
+        break;
       }
 
-      for (i = 0; i < count; i++) {
-        fprintf(pFile, "%d    %d\n", i, ans[i].value);
-      }
-      fprintf(pFile, " \n");
-      fclose(pFile);
-
-      // free memory
-      free(currKnode);
-      free(offset);
-      free(keys);
-      free(ans);
-
-      // break out of case
-      break;
-    }
-
-    case 'r': {
-      int start, end;
-      scanf("%d", &start);
-      scanf("%d", &end);
-      if (start > end) {
-        input = start;
-        start = end;
-        end = input;
-      }
-      // printf("For range %d to %d, ", start, end);
-      list_t *ansList;
-      ansList = findRange(root, start, end);
-      // printf("%d records found\n", list_get_length(ansList));
-      //  list_iterator_t iter;
-      free(ansList);
-      break;
-    }
-
-    case 'j': {
-
-      // get # of queries from user
-      int count;
-      sscanf(commandPointer, "%d", &count);
-      while (*commandPointer != 32 && *commandPointer != '\n')
-        commandPointer++;
-
-      int rSize;
-      sscanf(commandPointer, "%d", &rSize);
-      while (*commandPointer != 32 && *commandPointer != '\n')
-        commandPointer++;
-
-      // printf("\n******command: j count=%d, rSize=%d \n", count, rSize);
-      if (rSize > size || rSize < 0) {
-        printf("Search range size is larger than data set size %d.\n",
-               (int)size);
-        exit(0);
+      case 'd': {
+        SCANF_CHECKN(1, "%d", &input);;
+        while (getchar() != (int)'\n')
+          ;
+        root = (node *)deleteVal(root, input);
+        print_tree(root);
+        break;
       }
 
-      // INPUT: knodes CPU allocation (setting pointer in mem variable)
-      knode *knodes = (knode *)((long)mem + (long)rootLoc);
-      long knodes_elem = ((long)(mem_used) - (long)rootLoc) / sizeof(knode);
-      long knodes_mem = (long)(mem_used) - (long)rootLoc;
-      // printf("knodes_elem=%d, knodes_unit_mem=%d, knodes_mem=%d\n",
-      //       (int)knodes_elem, (int)sizeof(knode), (int)knodes_mem);
+      case 'x': {
+        while (getchar() != (int)'\n')
+          ;
+        root = destroy_tree(root);
+        print_tree(root);
+        break;
+      }
 
-      // INPUT: currKnode CPU allocation
-      long *currKnode;
-      currKnode = (long *)malloc(count * sizeof(long));
-      // INPUT: offset CPU initialization
-      memset(currKnode, 0, count * sizeof(long));
+      case 'l': {
+        while (getchar() != (int)'\n')
+          ;
+        print_leaves(root);
+        break;
+      }
 
-      // INPUT: offset CPU allocation
-      long *offset;
-      offset = (long *)malloc(count * sizeof(long));
-      // INPUT: offset CPU initialization
-      memset(offset, 0, count * sizeof(long));
+      case 't': {
+        while (getchar() != (int)'\n')
+          ;
+        print_tree(root);
+        break;
+      }
 
-      // INPUT: lastKnode CPU allocation
-      long *lastKnode;
-      lastKnode = (long *)malloc(count * sizeof(long));
-      // INPUT: offset CPU initialization
-      memset(lastKnode, 0, count * sizeof(long));
+      case 'v': {
+        while (getchar() != (int)'\n')
+          ;
+        verbose_output = !verbose_output;
+        break;
+      }
 
-      // INPUT: offset_2 CPU allocation
-      long *offset_2;
-      offset_2 = (long *)malloc(count * sizeof(long));
-      // INPUT: offset CPU initialization
-      memset(offset_2, 0, count * sizeof(long));
+      case 'q': {
+        while (getchar() != (int)'\n')
+          ;
+        return EXIT_SUCCESS;
+      }
 
-      // INPUT: start, end CPU allocation
-      int *start;
-      start = (int *)malloc(count * sizeof(int));
-      int *end;
-      end = (int *)malloc(count * sizeof(int));
-      // INPUT: start, end CPU initialization
-      int i;
-      for (i = 0; i < count; i++) {
-        start[i] = (rand() / (float)RAND_MAX) * size;
-        end[i] = start[i] + rSize;
-        if (end[i] >= size) {
-          start[i] = start[i] - (end[i] - size);
-          end[i] = size - 1;
+      case 'k': {
+
+        // get # of queries from user
+        int count;
+        sscanf(commandPointer, "%d", &count);
+        while (*commandPointer != 32 && *commandPointer != '\n')
+          commandPointer++;
+
+        // printf("\n ******command: k count=%d \n", count);
+        if (count > 65535) {
+          printf("ERROR: Number of requested querries should be 65,535 at most. "
+                "(limited by # of CUDA blocks)\n");
+          exit(0);
         }
-      }
 
-      // INPUT: recstart, reclenght CPU allocation
-      int *recstart;
-      recstart = (int *)malloc(count * sizeof(int));
-      int *reclength;
-      reclength = (int *)malloc(count * sizeof(int));
-      // OUTPUT: ans CPU initialization
-      for (i = 0; i < count; i++) {
-        recstart[i] = 0;
-        reclength[i] = 0;
-      }
+        // INPUT: records CPU allocation (setting pointer in mem variable)
+        record *records = (record *)mem;
+        long records_mem = (long)rootLoc;
+        // printf("records_elem=%d, records_unit_mem=%d, records_mem=%d\n",
+        //        (int)records_elem, (int)sizeof(record), (int)records_mem);
 
-      s_compute2 = std::chrono::high_resolution_clock::now();
-      // CUDA kernel
-      kernel_gpu_cuda_wrapper_2(knodes, knodes_elem, knodes_mem,
+        // INPUT: knodes CPU allocation (setting pointer in mem variable)
+        knode *knodes = (knode *)((long)mem + (long)rootLoc);
+        long knodes_elem = ((long)(mem_used) - (long)rootLoc) / sizeof(knode);
+        long knodes_mem = (long)(mem_used) - (long)rootLoc;
+        // printf("knodes_elem=%d, knodes_unit_mem=%d, knodes_mem=%d\n",
+        //        (int)knodes_elem, (int)sizeof(knode), (int)knodes_mem);
 
+        // INPUT: currKnode CPU allocation
+        long *currKnode;
+        currKnode = (long *)malloc(count * sizeof(long));
+        // INPUT: offset CPU initialization
+        memset(currKnode, 0, count * sizeof(long));
+
+        // INPUT: offset CPU allocation
+        long *offset;
+        offset = (long *)malloc(count * sizeof(long));
+        // INPUT: offset CPU initialization
+        memset(offset, 0, count * sizeof(long));
+
+        // INPUT: keys CPU allocation
+        int *keys;
+        keys = (int *)malloc(count * sizeof(int));
+        // INPUT: keys CPU initialization
+        int i;
+        for (i = 0; i < count; i++) {
+          keys[i] = (rand() / (float)RAND_MAX) * size;
+        }
+
+        // OUTPUT: ans CPU allocation
+        record *ans = (record *)malloc(sizeof(record) * count);
+        // OUTPUT: ans CPU initialization
+        for (i = 0; i < count; i++) {
+          ans[i].value = -1;
+        }
+        // printf("1. kernel_gpu_cuda_wrapper\n");
+        s_compute = std::chrono::high_resolution_clock::now();
+        // CUDA kernel
+        kernel_gpu_cuda_wrapper(records, records_mem, knodes, knodes_elem,
+                                knodes_mem,
                                 order, maxheight, count,
+                                currKnode, offset, keys, ans);
+        e_compute = std::chrono::high_resolution_clock::now();
+        pFile = fopen(output, "aw+");
+        if (pFile == NULL) {
+          fprintf(stderr, "Fail to open %s!\n", output);
+        }
 
-                                currKnode, offset, lastKnode, offset_2, start,
-                                end, recstart, reclength);
-      e_compute2 = std::chrono::high_resolution_clock::now();
-      pFile = fopen(output, "aw+");
-      if (pFile == NULL) {
-        fprintf(stderr, "Fail to open %s!\n", output);
+        for (i = 0; i < count; i++) {
+          fprintf(pFile, "%d    %d\n", i, ans[i].value);
+        }
+        fprintf(pFile, " \n");
+        fclose(pFile);
+
+        // free memory
+        free(currKnode);
+        free(offset);
+        free(keys);
+        free(ans);
+
+        // break out of case
+        break;
       }
 
-      // fprintf(pFile, "\n******command: j count=%d, rSize=%d \n", count,
-      // rSize);
-      for (i = 0; i < count; i++) {
-        fprintf(pFile, "%d    %d    %d\n", i, recstart[i], reclength[i]);
+      case 'r': {
+        int start, end;
+        SCANF_CHECK1("%d", &start);
+        SCANF_CHECK1("%d", &end);
+        if (start > end) {
+          input = start;
+          start = end;
+          end = input;
+        }
+        // printf("For range %d to %d, ", start, end);
+        list_t *ansList;
+        ansList = findRange(root, start, end);
+        // printf("%d records found\n", list_get_length(ansList));
+        //  list_iterator_t iter;
+        free(ansList);
+        break;
       }
-      fprintf(pFile, " \n");
-      fclose(pFile);
 
-      // free memory
-      free(currKnode);
-      free(offset);
-      free(lastKnode);
-      free(offset_2);
-      free(start);
-      free(end);
-      free(recstart);
-      free(reclength);
+      case 'j': {
 
-      // break out of case
-      break;
-    }
-    default: {
+        // get # of queries from user
+        int count;
+        sscanf(commandPointer, "%d", &count);
+        while (*commandPointer != 32 && *commandPointer != '\n')
+          commandPointer++;
 
-      // usage_2();
-      break;
+        int rSize;
+        sscanf(commandPointer, "%d", &rSize);
+        while (*commandPointer != 32 && *commandPointer != '\n')
+          commandPointer++;
+
+        // printf("\n******command: j count=%d, rSize=%d \n", count, rSize);
+        if (rSize > size || rSize < 0) {
+          printf("Search range size is larger than data set size %d.\n",
+                (int)size);
+          exit(0);
+        }
+
+        // INPUT: knodes CPU allocation (setting pointer in mem variable)
+        knode *knodes = (knode *)((long)mem + (long)rootLoc);
+        long knodes_elem = ((long)(mem_used) - (long)rootLoc) / sizeof(knode);
+        long knodes_mem = (long)(mem_used) - (long)rootLoc;
+        // printf("knodes_elem=%d, knodes_unit_mem=%d, knodes_mem=%d\n",
+        //       (int)knodes_elem, (int)sizeof(knode), (int)knodes_mem);
+
+        // INPUT: currKnode CPU allocation
+        long *currKnode;
+        currKnode = (long *)malloc(count * sizeof(long));
+        // INPUT: offset CPU initialization
+        memset(currKnode, 0, count * sizeof(long));
+
+        // INPUT: offset CPU allocation
+        long *offset;
+        offset = (long *)malloc(count * sizeof(long));
+        // INPUT: offset CPU initialization
+        memset(offset, 0, count * sizeof(long));
+
+        // INPUT: lastKnode CPU allocation
+        long *lastKnode;
+        lastKnode = (long *)malloc(count * sizeof(long));
+        // INPUT: offset CPU initialization
+        memset(lastKnode, 0, count * sizeof(long));
+
+        // INPUT: offset_2 CPU allocation
+        long *offset_2;
+        offset_2 = (long *)malloc(count * sizeof(long));
+        // INPUT: offset CPU initialization
+        memset(offset_2, 0, count * sizeof(long));
+
+        // INPUT: start, end CPU allocation
+        int *start;
+        start = (int *)malloc(count * sizeof(int));
+        int *end;
+        end = (int *)malloc(count * sizeof(int));
+        // INPUT: start, end CPU initialization
+        int i;
+        for (i = 0; i < count; i++) {
+          start[i] = (rand() / (float)RAND_MAX) * size;
+          end[i] = start[i] + rSize;
+          if (end[i] >= size) {
+            start[i] = start[i] - (end[i] - size);
+            end[i] = size - 1;
+          }
+        }
+
+        // INPUT: recstart, reclenght CPU allocation
+        int *recstart;
+        recstart = (int *)malloc(count * sizeof(int));
+        int *reclength;
+        reclength = (int *)malloc(count * sizeof(int));
+        // OUTPUT: ans CPU initialization
+        for (i = 0; i < count; i++) {
+          recstart[i] = 0;
+          reclength[i] = 0;
+        }
+
+        s_compute2 = std::chrono::high_resolution_clock::now();
+        // CUDA kernel
+        kernel_gpu_cuda_wrapper_2(knodes, knodes_elem, knodes_mem,
+                                  order, maxheight, count,
+                                  currKnode, offset, lastKnode, offset_2, start,
+                                  end, recstart, reclength);
+        e_compute2 = std::chrono::high_resolution_clock::now();
+        pFile = fopen(output, "aw+");
+        if (pFile == NULL) {
+          fprintf(stderr, "Fail to open %s!\n", output);
+        }
+
+        // fprintf(pFile, "\n******command: j count=%d, rSize=%d \n", count,
+        // rSize);
+        for (i = 0; i < count; i++) {
+          fprintf(pFile, "%d    %d    %d\n", i, recstart[i], reclength[i]);
+        }
+        fprintf(pFile, " \n");
+        fclose(pFile);
+
+        // free memory
+        free(currKnode);
+        free(offset);
+        free(lastKnode);
+        free(offset_2);
+        free(start);
+        free(end);
+        free(recstart);
+        free(reclength);
+
+        // break out of case
+        break;
+      }
+      default: {
+        // usage_2();
+        break;
+      }
     }
-    }
-    // printf("> ");
   }
-  // printf("\n");
+
+#ifdef WARMUP
+  std::chrono::duration<double, std::milli> elapsed_milli_warmup = end_warmup - start_warmup;
+  std::cerr << "Warmup time: " << elapsed_milli_warmup.count() << " ms" << std::endl;
+  cudaStreamDestroy(stream);
+#endif
+
   auto end_all = std::chrono::high_resolution_clock::now();
-  std::chrono::duration<double, std::milli> compute_milli2 =
-      e_compute2 - s_compute2;
-  std::chrono::duration<double, std::milli> compute_milli =
-      e_compute - s_compute;
-  std::cerr << "Computation: " << compute_milli.count() + compute_milli2.count()
-            << " ms" << std::endl;
+  std::chrono::duration<double, std::milli> compute_milli2 = e_compute2 - s_compute2;
+  std::chrono::duration<double, std::milli> compute_milli =  e_compute - s_compute;
+  std::cerr << "Computation: " << compute_milli.count() + compute_milli2.count() << " ms" << std::endl;
   std::chrono::duration<double, std::milli> elapsed_milli = end_all - start_all;
   std::cerr << "Elapsed time: " << elapsed_milli.count() << " ms" << std::endl;
-#ifdef WARMUP
-  std::chrono::duration<double, std::milli> elapsed_milli_warmup =
-      end_warmup - start_warmup;
-  std::cerr << "Warmup time: " << elapsed_milli_warmup.count() << " ms"
-            << std::endl;
+
+#ifdef BREAKDOWNS
+  std::cerr << "##### Breakdown Computation #####" << std::endl;
+  std::cerr << "Allocation time: "   << g_btree2_alloc_ms + g_btree1_alloc_ms  << " ms" << std::endl;
+  std::cerr << "H2D transfer time: " << g_btree2_h2d_ms + g_btree1_h2d_ms     << " ms" << std::endl;
+  std::cerr << "Compute time: "      << g_btree2_compute_ms + g_btree1_compute_ms<< " ms" << std::endl;
+  std::cerr << "D2H transfer time: " << g_btree2_d2h_ms + g_btree1_d2h_ms     << " ms" << std::endl;
+  std::cerr << "Free time: "         << g_btree2_free_ms + g_btree1_free_ms   << " ms" << std::endl;
+  std::cerr << "#################################" << std::endl;
 #endif
-  free(mem);
-  return EXIT_SUCCESS;
+ free(mem);
+ return EXIT_SUCCESS;
 }

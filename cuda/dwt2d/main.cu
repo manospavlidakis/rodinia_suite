@@ -55,31 +55,58 @@ struct dwt {
   int dwtLvls;
 };
 
-int getImg(char *srcFilename, unsigned char *srcImg, int inputSize) {
-  // printf("Loading ipnput: %s\n", srcFilename);
-  char *path = "../../data/dwt2d/";
-  char *newSrc = NULL;
+#include <limits.h>   // PATH_MAX
+#include <sys/stat.h> // fstat
 
-  if ((newSrc = (char *)malloc(strlen(srcFilename) + strlen(path) + 1)) !=
-      NULL) {
-    newSrc[0] = '\0';
-    strcat(newSrc, path);
-    strcat(newSrc, srcFilename);
-    srcFilename = newSrc;
+static int read_full(int fd, unsigned char* dst, size_t n) {
+  size_t off = 0;
+  while (off < n) {
+    ssize_t r = read(fd, dst + off, n - off);
+    if (r < 0) return -1;
+    if (r == 0) break; // EOF
+    off += (size_t)r;
   }
-  // printf("Loading ipnput: %s\n", srcFilename);
+  return (off == n) ? 0 : 1; // 0 ok, 1 short read
+}
 
-  // srcFilename = strcat("../../data/dwt2d/",srcFilename);
-  // read image
-  int i = open(srcFilename, O_RDONLY, 0644);
-  if (i == -1) {
-    error(0, errno, "cannot access %s", srcFilename);
+int getImg(const char *srcFilename, unsigned char *srcImg, size_t inputSize) {
+  const char *dir = "../../data/dwt2d/";
+
+  char fullpath[PATH_MAX];
+  int n = snprintf(fullpath, sizeof(fullpath), "%s%s", dir, srcFilename);
+  if (n < 0 || (size_t)n >= sizeof(fullpath)) {
+    fprintf(stderr, "ERROR: path too long: %s%s\n", dir, srcFilename);
     return -1;
   }
-  int ret = read(i, srcImg, inputSize);
-  // printf("precteno %d, inputsize %d\n", ret, inputSize);
-  close(i);
 
+  int fd = open(fullpath, O_RDONLY);
+  if (fd == -1) {
+    error(0, errno, "cannot access %s", fullpath);
+    return -1;
+  }
+
+  // Optional: sanity-check file size (helps catch “bmp vs raw rgb” mistakes)
+  struct stat st;
+  if (fstat(fd, &st) == 0) {
+    if ((size_t)st.st_size < inputSize) {
+      fprintf(stderr, "ERROR: file too small: %s (size=%zu, expected=%zu)\n",
+              fullpath, (size_t)st.st_size, inputSize);
+      close(fd);
+      return -1;
+    }
+  }
+
+  int rf = read_full(fd, srcImg, inputSize);
+  close(fd);
+
+  if (rf == -1) {
+    error(0, errno, "read failed %s", fullpath);
+    return -1;
+  }
+  if (rf == 1) {
+    fprintf(stderr, "ERROR: short read %s (expected=%zu)\n", fullpath, inputSize);
+    return -1;
+  }
   return 0;
 }
 
@@ -162,7 +189,6 @@ void processDWT(struct dwt *d, int forward, int writeVisual) {
                 forward);
     nStage2dDWT(c_b, c_b_out, backup, d->pixWidth, d->pixHeight, d->dwtLvls,
                 forward);
-
     // -------test----------
     // T *h_r_out=(T*)malloc(componentSize);
     // cudaMemcpy(h_r_out, c_g_out, componentSize, cudaMemcpyDeviceToHost);
@@ -172,18 +198,16 @@ void processDWT(struct dwt *d, int forward, int writeVisual) {
     // if((ii+1) % (d->pixWidth) == 0) fprintf(stderr, "\n");
     // }
     // -------test----------
-
+    cudaDeviceSynchronize();
     e_compute = std::chrono::high_resolution_clock::now();
-    std::chrono::duration<double, std::milli> compute_milli =
-        e_compute - s_compute;
+#ifdef WARMUP
+    std::chrono::duration<double, std::milli> elapsed_milli_warmup = end_warmup - start_warmup;
+    std::cerr << "Warmup time: " << elapsed_milli_warmup.count() << " ms" << std::endl;
+    cudaStreamDestroy(stream);
+#endif
+    std::chrono::duration<double, std::milli> compute_milli = e_compute - s_compute;
     std::cerr << "Computation: " << compute_milli.count() << " ms" << std::endl;
 
-#ifdef WARMUP
-    std::chrono::duration<double, std::milli> elapsed_milli_warmup =
-        end_warmup - start_warmup;
-    std::cerr << "Warmup time: " << elapsed_milli_warmup.count() << " ms"
-              << std::endl;
-#endif
     /* Store DWT to file */
 #ifdef OUTPUT
     if (writeVisual) {
@@ -219,12 +243,10 @@ void processDWT(struct dwt *d, int forward, int writeVisual) {
     cudaCheckError("Alloc device memory");
     cudaMemset(c_r, 0, componentSize);
     cudaCheckError("Memset device memory");
-
     bwToComponent(c_r, d->srcImg, d->pixWidth, d->pixHeight);
 
     // Compute DWT
-    nStage2dDWT(c_r, c_r_out, backup, d->pixWidth, d->pixHeight, d->dwtLvls,
-                forward);
+    nStage2dDWT(c_r, c_r_out, backup, d->pixWidth, d->pixHeight, d->dwtLvls, forward);
 
     // Store DWT to file
     // #ifdef OUTPUT
@@ -271,7 +293,7 @@ int main(int argc, char **argv) {
   int pixWidth = 0;  //<real pixWidth
   int pixHeight = 0; //<real pixHeight
   int compCount = 3; // number of components; 3 for RGB or YUV, 4 for RGBA
-  int bitDepth = 8;
+  [[maybe_unused]] int bitDepth = 8;
   int dwtLvls = 3; // default numuber of DWT levels
   int device = 0;
   int forward = 1; // forward transform
@@ -382,10 +404,10 @@ int main(int argc, char **argv) {
   d->dwtLvls = dwtLvls;
 
   // file names
-  d->srcFilename = (char *)malloc(strlen(argv[0]));
+  d->srcFilename = (char *)malloc(strlen(argv[0]) + 1);
   strcpy(d->srcFilename, argv[0]);
   if (argc == 1) { // only one filename supplyed
-    d->outFilename = (char *)malloc(strlen(d->srcFilename) + 4);
+    d->outFilename = (char *)malloc(strlen(d->srcFilename) + 5);
     strcpy(d->outFilename, d->srcFilename);
     strcpy(d->outFilename + strlen(d->srcFilename), ".dwt");
   } else {
@@ -402,8 +424,7 @@ int main(int argc, char **argv) {
   //   printf(" 9/7 transform:\t\t%d\n", dwt97);
 
   // data sizes
-  int inputSize =
-      pixWidth * pixHeight * compCount; //<amount of data (in bytes) to proccess
+  size_t inputSize = (size_t)pixWidth * (size_t)pixHeight * (size_t)compCount;
 
   // load img source image
   cudaMallocHost((void **)&d->srcImg, inputSize);

@@ -7,7 +7,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
-
+#include <cstring>
 #define BLOCK_SIZE 16
 #define STR_SIZE 256
 
@@ -196,7 +196,7 @@ int main(int argc, char **argv) {
   readinput(powerIn, numRows, numCols, layers, pfile);
   readinput(tempIn, numRows, numCols, layers, tfile);
 
-  memcpy(tempCopy, tempIn, size * sizeof(float));
+  std::memcpy(tempCopy, tempIn, size * sizeof(float));
   auto end_0 = std::chrono::high_resolution_clock::now();
 #ifdef WARMUP
   start_warmup = std::chrono::high_resolution_clock::now();

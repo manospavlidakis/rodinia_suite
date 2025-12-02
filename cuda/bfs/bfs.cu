@@ -22,6 +22,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include "../../common/util.h"
 // #define BREAKDOWNS
 
 #ifdef BREAKDOWNS
@@ -33,7 +34,8 @@ std::chrono::high_resolution_clock::time_point s_b2;
 std::chrono::high_resolution_clock::time_point e_b2;
 std::chrono::high_resolution_clock::time_point s_b3;
 std::chrono::high_resolution_clock::time_point e_b3;
-
+std::chrono::high_resolution_clock::time_point s_b4;
+std::chrono::high_resolution_clock::time_point e_b4;
 #endif
 // #define DEBUG
 #define MAX_THREADS_PER_BLOCK 512
@@ -92,7 +94,7 @@ void BFSGraph(int argc, char **argv) {
 
   int source = 0;
 
-  fscanf(fp, "%d", &no_of_nodes);
+  FSCANF_CHECK(fp, "%d", &no_of_nodes);
 
   int num_of_blocks = 1;
   int num_of_threads_per_block = no_of_nodes;
@@ -113,7 +115,7 @@ void BFSGraph(int argc, char **argv) {
   int start, edgeno;
   // initalize the memory
   for (unsigned int i = 0; i < no_of_nodes; i++) {
-    fscanf(fp, "%d %d", &start, &edgeno);
+    FSCANF_CHECK(fp, "%d %d", &start, &edgeno);
     h_graph_nodes[i].starting = start;
     h_graph_nodes[i].no_of_edges = edgeno;
     h_graph_mask[i] = false;
@@ -122,20 +124,20 @@ void BFSGraph(int argc, char **argv) {
   }
 
   // read the source node from the file
-  fscanf(fp, "%d", &source);
+  FSCANF_CHECK(fp, "%d", &source);
   source = 0;
 
   // set the source node as true in the mask
   h_graph_mask[source] = true;
   h_graph_visited[source] = true;
 
-  fscanf(fp, "%d", &edge_list_size);
+  FSCANF_CHECK(fp, "%d", &edge_list_size);
 
   int id, cost;
   int *h_graph_edges = (int *)malloc(sizeof(int) * edge_list_size);
   for (int i = 0; i < edge_list_size; i++) {
-    fscanf(fp, "%d", &id);
-    fscanf(fp, "%d", &cost);
+    FSCANF_CHECK(fp, "%d", &id);
+    FSCANF_CHECK(fp, "%d", &cost);
     h_graph_edges[i] = id;
   }
 
@@ -248,6 +250,7 @@ void BFSGraph(int argc, char **argv) {
   cudaMemcpy(h_cost, d_cost, sizeof(int) * no_of_nodes, cudaMemcpyDeviceToHost);
 #ifdef BREAKDOWNS
   e_b3 = std::chrono::high_resolution_clock::now();
+  s_b4 = std::chrono::high_resolution_clock::now();
 #endif
   cudaFree(d_graph_nodes);
   cudaFree(d_graph_edges);
@@ -255,7 +258,11 @@ void BFSGraph(int argc, char **argv) {
   cudaFree(d_updating_graph_mask);
   cudaFree(d_graph_visited);
   cudaFree(d_cost);
-
+  cudaFree(d_over);
+#ifdef BREAKDOWNS
+  e_b4 = std::chrono::high_resolution_clock::now();
+#endif
+  cudaDeviceSynchronize();
   e_compute = std::chrono::high_resolution_clock::now();
 #ifdef OUTPUT
   // Store the result into a file
@@ -264,7 +271,7 @@ void BFSGraph(int argc, char **argv) {
     fprintf(fpo, "%d) cost:%d\n", i, h_cost[i]);
   fclose(fpo);
 
-  printf("Result stored in result.txt\n");
+  //printf("Result stored in result.txt\n");
 #endif
 
   // cleanup memory
@@ -275,32 +282,29 @@ void BFSGraph(int argc, char **argv) {
   free(h_graph_visited);
   free(h_cost);
   auto end_all = std::chrono::high_resolution_clock::now();
-  std::chrono::duration<double, std::milli> elapsed_milli_0 = end_0 - start_0;
-  std::cerr << "Init time: " << elapsed_milli_0.count() << " ms" << std::endl;
-
-  std::chrono::duration<double, std::milli> compute_milli =
-      e_compute - s_compute;
+  // std::chrono::duration<double, std::milli> elapsed_milli_0 = end_0 - start_0;
+  // std::cerr << "Init time: " << elapsed_milli_0.count() << " ms" << std::endl;
+  std::chrono::duration<double, std::milli> compute_milli = e_compute - s_compute;
   std::cerr << "Computation: " << compute_milli.count() << " ms" << std::endl;
-
   std::chrono::duration<double, std::milli> elapsed_milli = end_all - start_all;
   std::cerr << "Elapsed time: " << elapsed_milli.count() << " ms" << std::endl;
 #ifdef WARMUP
-  std::chrono::duration<double, std::milli> elapsed_milli_warmup =
-      end_warmup - start_warmup;
-  std::cerr << "Warmup time: " << elapsed_milli_warmup.count() << " ms"
-            << std::endl;
+  std::chrono::duration<double, std::milli> elapsed_milli_warmup = end_warmup - start_warmup;
+  std::cerr << "Warmup time: " << elapsed_milli_warmup.count() << " ms" << std::endl;
+  cudaStreamDestroy(stream);
 #endif
 #ifdef BREAKDOWNS
-  std::cerr << " ##### Breakdown Computation #####" << std::endl;
+  std::cerr << "##### Breakdown Computation #####" << std::endl;
   std::chrono::duration<double, std::milli> allocation = e_b0 - s_b0;
   std::cerr << "Allocation time: " << allocation.count() << " ms" << std::endl;
   std::chrono::duration<double, std::milli> transfer = e_b2 - s_b2;
-  std::cerr << "Transfer time: " << transfer.count() << " ms" << std::endl;
+  std::cerr << "H2D transfer time: " << transfer.count() << " ms" << std::endl;
   std::chrono::duration<double, std::milli> compute = e_b1 - s_b1;
   std::cerr << "Compute time: " << compute.count() << " ms" << std::endl;
   std::chrono::duration<double, std::milli> transfer2 = e_b3 - s_b3;
-  std::cerr << "Transfer Back time: " << transfer2.count() << " ms"
-            << std::endl;
-  std::cerr << " #################################" << std::endl;
+  std::cerr << "D2H transfer time: " << transfer2.count() << " ms"<< std::endl;
+  std::chrono::duration<double, std::milli> freetime = e_b4 - s_b4;
+  std::cerr << "Free time: " << freetime.count() << " ms"<< std::endl;
+  std::cerr << "#################################" << std::endl;
 #endif
 }

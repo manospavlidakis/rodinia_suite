@@ -1,0 +1,6 @@
+#!/bin/bash
+#./cfd ../../data/cfd/fvcorr.domn.097K   
+./cfd ../../data/cfd/fvcorr.domn.193K   
+#./cfd ../../data/cfd/missile.domn.0.2M  
+
+# replace euler3d with other CFD programs

@@ -1,91 +1,75 @@
-#Configure
-#CUDA_INSTALL_PATH ?= /usr/local/cuda
-CUDA_INSTALL_PATH = $(CUDA_DIR)
+# -----------------------------
+# Configure (provided by buildall.sh)
+# -----------------------------
+CUDA_DIR       ?= /usr/local/cuda
+CUDA_LIB_DIR   ?=
+GENCODE_FLAGS  ?=
+CXXFLAGS       ?=
+
 EXECUTABLE := dwt2d
 
-# NVCC Options
-NVCCFLAGS += $(CXXFLAGS)
+# Compilers
+CXX  := g++
+CC   := gcc
+NVCC := $(CUDA_DIR)/bin/nvcc
 
 # Files
-CFILES := 
-CXXFILES := 
-CUFILES := main.cu dwt.cu components.cu dwt_cuda/fdwt53.cu dwt_cuda/fdwt97.cu dwt_cuda/common.cu dwt_cuda/rdwt97.cu dwt_cuda/rdwt53.cu
+CFILES :=
+CXXFILES :=
+CUFILES := main.cu dwt.cu components.cu \
+           dwt_cuda/fdwt53.cu dwt_cuda/fdwt97.cu dwt_cuda/common.cu \
+           dwt_cuda/rdwt97.cu dwt_cuda/rdwt53.cu
 
-# Includes
-INCLUDES := -I. -I$(CUDA_INSTALL_PATH)/include -I$(INCLUDE) 
+# -----------------------------
+# Includes / libs
+# -----------------------------
+INCLUDES := -I. -I$(CUDA_DIR)/include
+ifneq ($(strip $(INCLUDE)),)
+INCLUDES += -I$(INCLUDE)
+endif
 
-# Common flags
-COMMONFLAGS += $(INCLUDES)  -I$(INCLUDE) -L$(CUDA_LIB_DIR) 
-NVCCFLAGS += $(COMMONFLAGS)  -I$(INCLUDE) -L$(CUDA_LIB_DIR) 
-CXXFLAGS += $(COMMONFLAGS)  -I$(INCLUDE) -L$(CUDA_LIB_DIR) 
-CFLAGS += $(COMMONFLAGS) -std=c99  
-LDFLAGS += -L$(CUDA_INSTALL_PATH)/lib64  -I$(INCLUDE) -L$(CUDA_LIB_DIR) 
+LIBDIRS :=
+ifneq ($(strip $(CUDA_LIB_DIR)),)
+LIBDIRS += -L$(CUDA_LIB_DIR)
+endif
+# Keep this for older layouts if CUDA_LIB_DIR wasn’t provided
+LIBDIRS += -L$(CUDA_DIR)/lib64
 
-# Warning flags (from cuda common.mk)
-CXXWARN_FLAGS := \
-	-W -Wall \
-	-Wimplicit \
-	-Wswitch \
-	-Wformat \
-	-Wchar-subscripts \
-	-Wparentheses \
-	-Wmultichar \
-	-Wtrigraphs \
-	-Wpointer-arith \
-	-Wcast-align \
-	-Wreturn-type \
-	-Wno-unused-function \
-	$(SPACE)
+# -----------------------------
+# Flags
+# -----------------------------
+# Host flags (CXXFLAGS comes from buildall.sh; we extend it)
+HOST_CXXFLAGS := $(CXXFLAGS) $(INCLUDES) $(LIBDIRS)
+HOST_CFLAGS   := $(INCLUDES) $(LIBDIRS) -std=c99
 
-CWARN_FLAGS := $(CXXWARN_FLAGS) \
-	-Wstrict-prototypes \
-	-Wmissing-prototypes \
-	-Wmissing-declarations \
-	-Wnested-externs \
-	-Wmain \
+# NVCC flags: do NOT blindly append $(CXXFLAGS) (may contain -W, etc.)
+# Only forward safe/common parts + let build script control GENCODE_FLAGS.
+NVCCFLAGS := $(INCLUDES) $(LIBDIRS) -O3 --compiler-options -fno-strict-aliasing
 
-CFLAGS += $(CWARN_FLAGS)
-CXXFLAGS += $(CXXWARN_FLAGS)
+# OUTPUT macro: your script already adds -DOUTPUT into CXXFLAGS,
+# but .cu compilation should also see it even if someone builds locally.
+OUTPUT ?= -DOUTPUT
 
-COMMONFLAGS += -O3
-NVCCFLAGS   += --compiler-options -fno-strict-aliasing
-CXXFLAGS    += -fno-strict-aliasing
-CFLAGS      += -fno-strict-aliasing
+LDFLAGS := $(LIBDIRS)
 
-#ifeq ($(performancetest),1)
-#    COMMONFLAGS += -DGPU_DWT_TESTING
-#endif
+# Objects
+COBJS   = $(CFILES:.c=.c.o)
+CXXOBJS = $(CXXFILES:.cpp=.cpp.o)
+CUOBJS  = $(CUFILES:.cu=.cu.o)
 
-#ifdef OUTPUT
-#	override OUTPUT = -DOUTPUT
-#endif
-
-OUTPUT = -DOUTPUT
-
-# Compilers
-CXX := g++
-CC := gcc
-LINK := g++ -fPIC
-NVCC := $(CUDA_INSTALL_PATH)/bin/nvcc
-
-# Generate object files list
-COBJS=$(CFILES:.c=.c.o)
-CXXOBJS=$(CXXFILES:.cpp=.cpp.o)
-CUOBJS=$(CUFILES:.cu=.cu.o)
-
-.SUFFIXES: .c.o .cpp.o .cu.o .cu 
+.SUFFIXES: .c.o .cpp.o .cu.o .cu
 
 %.c.o: %.c
-	$(CC) $(CFLAGS) -c $< -o $@
-
-%.cu.o: %.cu
-	$(NVCC) $(OUTPUT) $(NVCCFLAGS) -c $< -o $@
+	$(CC) $(HOST_CFLAGS) -c $< -o $@
 
 %.cpp.o: %.cpp
-	$(CXX) $(CXXFLAGS) -c $< -o $@
+	$(CXX) $(HOST_CXXFLAGS) -c $< -o $@
 
-$(EXECUTABLE): $(COBJS) $(CXXOBJS) $(CUOBJS) 
-	$(NVCC) -o $(EXECUTABLE) $(COBJS) $(CXXOBJS) $(CUOBJS) $(LDFLAGS)
+%.cu.o: %.cu
+	$(NVCC) $(OUTPUT) $(NVCCFLAGS) $(GENCODE_FLAGS) -c $< -o $@
+
+$(EXECUTABLE): $(COBJS) $(CXXOBJS) $(CUOBJS)
+	$(NVCC) $(GENCODE_FLAGS) -o $(EXECUTABLE) $(COBJS) $(CXXOBJS) $(CUOBJS) $(LDFLAGS)
 
 clean:
-	rm -f $(COBJS) $(CXXOBJS) $(CUOBJS) $(EXECUTABLE)rm *.bmp.dwt.* *.csv
+	@rm -f $(COBJS) $(CXXOBJS) $(CUOBJS) $(EXECUTABLE) *.bmp.dwt.* *.csv

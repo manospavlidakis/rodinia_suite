@@ -4,6 +4,7 @@
 #include <iostream>
 #include <stdio.h>
 #include <vector>
+#include "../../common/util.h"
 
 #define min(a, b) a > b ? b : a
 #define ceilDiv(a, b) (a + b - 1) / b
@@ -32,7 +33,8 @@ std::chrono::high_resolution_clock::time_point s_b2;
 std::chrono::high_resolution_clock::time_point e_b2;
 std::chrono::high_resolution_clock::time_point s_b3;
 std::chrono::high_resolution_clock::time_point e_b3;
-
+std::chrono::high_resolution_clock::time_point s_b4;
+std::chrono::high_resolution_clock::time_point e_b4;
 #endif
 #define WARMUP
 typedef struct latLong {
@@ -80,8 +82,6 @@ __global__ void euclid(LatLong *d_locations, float *d_distances, int numRecords,
 int main(int argc, char *argv[]) {
   auto start = std::chrono::high_resolution_clock::now();
   auto start_0 = std::chrono::high_resolution_clock::now();
-
-  int i = 0;
   float lat, lng;
   int quiet = 0, timing = 0, platform = 0, device = 0;
 
@@ -194,14 +194,17 @@ int main(int argc, char *argv[]) {
              cudaMemcpyDeviceToHost);
 #ifdef BREAKDOWNS
   e_b3 = std::chrono::high_resolution_clock::now();
+  s_b4 = std::chrono::high_resolution_clock::now();
 #endif
-  // print out results
   // Free memory
   cudaFree(d_locations);
   cudaFree(d_distances);
+#ifdef BREAKDOWNS
+  e_b4 = std::chrono::high_resolution_clock::now();
+#endif
   e_compute = std::chrono::high_resolution_clock::now();
 #ifdef OUTPUT
-  std::cerr << " Store results to output!!" << std::endl;
+  //std::cerr << " Store results to output!!" << std::endl;
   // Store the result into a file.
   FILE *fpo = fopen("result.txt", "w");
   for (int i = 0; i < resultsCount; i++)
@@ -216,7 +219,12 @@ int main(int argc, char *argv[]) {
   auto end = std::chrono::high_resolution_clock::now();
   std::chrono::duration<double, std::milli> elapsed_milli_0 = end_0 - start_0;
   std::cerr << "Init time: " << elapsed_milli_0.count() << " ms" << std::endl;
-
+#ifdef WARMUP
+  std::chrono::duration<double, std::milli> elapsed_milli_warmup =
+      end_warmup - start_warmup;
+  std::cerr << "Warmup time: " << elapsed_milli_warmup.count() << " ms"
+            << std::endl;
+#endif
   std::chrono::duration<double, std::milli> compute_milli =
       e_compute - s_compute;
   std::cerr << "Computation: " << compute_milli.count() << " ms" << std::endl;
@@ -224,30 +232,26 @@ int main(int argc, char *argv[]) {
   std::chrono::duration<double, std::milli> elapsed_milli = end - start;
   std::cerr << "Elapsed time: " << elapsed_milli.count() << " ms" << std::endl;
 #ifdef BREAKDOWNS
-  std::cerr << " ##### Breakdown Computation #####" << std::endl;
+  std::cerr << "##### Breakdown Computation #####" << std::endl;
   std::chrono::duration<double, std::milli> allocation = e_b0 - s_b0;
   std::cerr << "Allocation time: " << allocation.count() << " ms" << std::endl;
   std::chrono::duration<double, std::milli> transfer = e_b2 - s_b2;
-  std::cerr << "Transfer time: " << transfer.count() << " ms" << std::endl;
+  std::cerr << "H2D transfer time: " << transfer.count() << " ms" << std::endl;
   std::chrono::duration<double, std::milli> compute = e_b1 - s_b1;
   std::cerr << "Compute time: " << compute.count() << " ms" << std::endl;
   std::chrono::duration<double, std::milli> transfer2 = e_b3 - s_b3;
-  std::cerr << "Transfer Back time: " << transfer2.count() << " ms"
-            << std::endl;
-  std::cerr << " #################################" << std::endl;
+  std::cerr << "D2H transfer time: " << transfer2.count() << " ms" << std::endl;
+  std::chrono::duration<double, std::milli> free2 = e_b4 - s_b4;
+  std::cerr << "Free time: " << free2.count() << " ms" << std::endl;
+  std::cerr << "#################################" << std::endl;
 #endif
-#ifdef WARMUP
-  std::chrono::duration<double, std::milli> elapsed_milli_warmup =
-      end_warmup - start_warmup;
-  std::cerr << "Warmup time: " << elapsed_milli_warmup.count() << " ms"
-            << std::endl;
-#endif
+
 }
 
 int loadData(char *filename, std::vector<Record> &records,
              std::vector<LatLong> &locations) {
   FILE *flist, *fp;
-  int i = 0;
+  int i;
   char dbname[64];
   int recNum = 0;
 
@@ -270,24 +274,40 @@ int loadData(char *filename, std::vector<Record> &records,
       exit(1);
     }
     // read each record
-    while (!feof(fp)) {
+    while (true) {
       Record record;
       LatLong latLong;
-      fgets(record.recString, 49, fp);
-      fgetc(fp); // newline
-      if (feof(fp))
-        break;
 
-      // parse for lat and long
+      // Read the fixed-length record line (up to 48 chars + '\0')
+      if (fgets(record.recString, 49, fp) == NULL) {
+        // Normal termination at EOF
+        if (feof(fp)) break;
+
+        // Real error
+        perror("fgets");
+        exit(1);
+      }
+
+      // Consume the rest of the line if it didn't include '\n'
+      // (handles cases where the line is longer than 48 chars)
+      int ch = 0;
+      while ((ch = fgetc(fp)) != '\n' && ch != EOF) { /* discard */ }
+
+      // If we hit EOF right after a partial/incomplete line, stop cleanly.
+      if (ch == EOF && feof(fp)) {
+        // You can choose to keep the record or drop it.
+        // Dropping is safer because it might be incomplete.
+        break;
+      }
+
+      // Now parse lat/lng from record.recString...
       char substr[6];
 
-      for (i = 0; i < 5; i++)
-        substr[i] = *(record.recString + i + 28);
+      for (i = 0; i < 5; i++) substr[i] = *(record.recString + i + 28);
       substr[5] = '\0';
       latLong.lat = atof(substr);
 
-      for (i = 0; i < 5; i++)
-        substr[i] = *(record.recString + i + 33);
+      for (i = 0; i < 5; i++) substr[i] = *(record.recString + i + 33);
       substr[5] = '\0';
       latLong.lng = atof(substr);
 

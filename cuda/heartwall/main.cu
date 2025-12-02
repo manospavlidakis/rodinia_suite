@@ -24,6 +24,8 @@ std::chrono::high_resolution_clock::time_point s_b2;
 std::chrono::high_resolution_clock::time_point e_b2;
 std::chrono::high_resolution_clock::time_point s_b3;
 std::chrono::high_resolution_clock::time_point e_b3;
+std::chrono::high_resolution_clock::time_point s_b4;
+std::chrono::high_resolution_clock::time_point e_b4;
 #endif
 
 params_common_change common_change;
@@ -38,13 +40,12 @@ __constant__ params_unique d_unique[ALL_POINTS];
 
 #include "kernel.cu"
 
-void write_data(char *filename, int frameNo, int frames_processed,
+void write_data(const char *filename, int frameNo, int frames_processed,
                 int endoPoints, int *input_a, int *input_b, int epiPoints,
                 int *input_2a, int *input_2b) {
   // printf("Writing output to %s\n", filename);
   FILE *fid;
   int i, j;
-  char c;
 
   fid = fopen(filename, "w+");
   if (fid == NULL) {
@@ -58,7 +59,7 @@ void write_data(char *filename, int frameNo, int frames_processed,
   fprintf(fid, "epiPoints: %d", epiPoints);
   for (j = 0; j < frames_processed; j++) {
     fprintf(fid, "\n---Frame %d---", j);
-    fprintf(fid, "\n--endo--\n", j);
+    fprintf(fid, "\n--endo--\n");
     for (i = 0; i < endoPoints; i++) {
       fprintf(fid, "%d\t", input_a[j + i * frameNo]);
     }
@@ -67,7 +68,7 @@ void write_data(char *filename, int frameNo, int frames_processed,
       // if(input_b[j*size+i] > 2000) input_b[j*size+i]=0;
       fprintf(fid, "%d\t", input_b[j + i * frameNo]);
     }
-    fprintf(fid, "\n--epi--\n", j);
+    fprintf(fid, "\n--epi--\n");
     for (i = 0; i < epiPoints; i++) {
       // if(input_2a[j*size_2+i] > 2000) input_2a[j*size_2+i]=0;
       fprintf(fid, "%d\t", input_2a[j + i * frameNo]);
@@ -129,12 +130,6 @@ int main(int argc, char *argv[]) {
   cudaFree(warm);
   end_warmup = std::chrono::high_resolution_clock::now();
 #endif
-  s_compute = std::chrono::high_resolution_clock::now();
-#ifdef BREAKDOWNS
-  s_b0 = std::chrono::high_resolution_clock::now();
-#endif
-  // pointers
-  cudaMalloc((void **)&common_change.d_frame, common.frame_mem);
 
   frames_processed = atoi(argv[2]);
   if (frames_processed < 0 || frames_processed > common.no_frames) {
@@ -143,7 +138,6 @@ int main(int argc, char *argv[]) {
            frames_processed, common.no_frames);
     return 0;
   }
-
   common.sSize = 40;
   common.tSize = 25;
   common.maxMove = 10;
@@ -173,10 +167,6 @@ int main(int argc, char *argv[]) {
   common.endoRow[17] = 287;
   common.endoRow[18] = 311;
   common.endoRow[19] = 339;
-  cudaMalloc((void **)&common.d_endoRow, common.endo_mem);
-  cudaMemcpy(common.d_endoRow, common.endoRow, common.endo_mem,
-             cudaMemcpyHostToDevice);
-
   common.endoCol = (int *)malloc(common.endo_mem);
   common.endoCol[0] = 408;
   common.endoCol[1] = 406;
@@ -198,21 +188,10 @@ int main(int argc, char *argv[]) {
   common.endoCol[17] = 383;
   common.endoCol[18] = 401;
   common.endoCol[19] = 411;
-  cudaMalloc((void **)&common.d_endoCol, common.endo_mem);
-  cudaMemcpy(common.d_endoCol, common.endoCol, common.endo_mem,
-             cudaMemcpyHostToDevice);
-
   common.tEndoRowLoc = (int *)malloc(common.endo_mem * common.no_frames);
-  cudaMalloc((void **)&common.d_tEndoRowLoc,
-             common.endo_mem * common.no_frames);
-
   common.tEndoColLoc = (int *)malloc(common.endo_mem * common.no_frames);
-  cudaMalloc((void **)&common.d_tEndoColLoc,
-             common.endo_mem * common.no_frames);
-
   common.epiPoints = EPI_POINTS;
   common.epi_mem = sizeof(int) * common.epiPoints;
-
   common.epiRow = (int *)malloc(common.epi_mem);
   common.epiRow[0] = 390;
   common.epiRow[1] = 419;
@@ -245,10 +224,6 @@ int main(int argc, char *argv[]) {
   common.epiRow[28] = 305;
   common.epiRow[29] = 331;
   common.epiRow[30] = 360;
-  cudaMalloc((void **)&common.d_epiRow, common.epi_mem);
-  cudaMemcpy(common.d_epiRow, common.epiRow, common.epi_mem,
-             cudaMemcpyHostToDevice);
-
   common.epiCol = (int *)malloc(common.epi_mem);
   common.epiCol[0] = 457;
   common.epiCol[1] = 454;
@@ -281,28 +256,167 @@ int main(int argc, char *argv[]) {
   common.epiCol[28] = 434;
   common.epiCol[29] = 448;
   common.epiCol[30] = 455;
-  cudaMalloc((void **)&common.d_epiCol, common.epi_mem);
-  cudaMemcpy(common.d_epiCol, common.epiCol, common.epi_mem,
-             cudaMemcpyHostToDevice);
-
   common.tEpiRowLoc = (int *)malloc(common.epi_mem * common.no_frames);
-  cudaMalloc((void **)&common.d_tEpiRowLoc, common.epi_mem * common.no_frames);
-
   common.tEpiColLoc = (int *)malloc(common.epi_mem * common.no_frames);
-  cudaMalloc((void **)&common.d_tEpiColLoc, common.epi_mem * common.no_frames);
-
   common.allPoints = ALL_POINTS;
-
-  // common
   common.in_rows = common.tSize + 1 + common.tSize;
   common.in_cols = common.in_rows;
   common.in_elem = common.in_rows * common.in_cols;
   common.in_mem = sizeof(fp) * common.in_elem;
+  common.in2_rows = 2 * common.sSize + 1;
+  common.in2_cols = 2 * common.sSize + 1;
+  common.in2_elem = common.in2_rows * common.in2_cols;
+  common.in2_mem = sizeof(float) * common.in2_elem;
+  common.conv_rows = common.in_rows + common.in2_rows - 1; // number of rows in I
+  common.conv_cols = common.in_cols + common.in2_cols - 1; // number of columns in I
+  common.conv_elem = common.conv_rows * common.conv_cols; // number of elements
+  common.conv_mem = sizeof(float) * common.conv_elem;
+  common.ioffset = 0;
+  common.joffset = 0;
+  common.in2_pad_add_rows = common.in_rows;
+  common.in2_pad_add_cols = common.in_cols;
+  common.in2_pad_cumv_rows = common.in2_rows + 2 * common.in2_pad_add_rows;
+  common.in2_pad_cumv_cols = common.in2_cols + 2 * common.in2_pad_add_cols;
+  common.in2_pad_cumv_elem =
+      common.in2_pad_cumv_rows * common.in2_pad_cumv_cols;
+  common.in2_pad_cumv_mem = sizeof(float) * common.in2_pad_cumv_elem;
+  common.in2_pad_cumv_sel_rowlow = 1 + common.in_rows; // (1 to n+1)
+  common.in2_pad_cumv_sel_rowhig = common.in2_pad_cumv_rows - 1;
+  common.in2_pad_cumv_sel_collow = 1;
+  common.in2_pad_cumv_sel_colhig = common.in2_pad_cumv_cols;
+  common.in2_pad_cumv_sel_rows =
+      common.in2_pad_cumv_sel_rowhig - common.in2_pad_cumv_sel_rowlow + 1;
+  common.in2_pad_cumv_sel_cols =
+      common.in2_pad_cumv_sel_colhig - common.in2_pad_cumv_sel_collow + 1;
+  common.in2_pad_cumv_sel_elem =
+      common.in2_pad_cumv_sel_rows * common.in2_pad_cumv_sel_cols;
+  common.in2_pad_cumv_sel_mem = sizeof(float) * common.in2_pad_cumv_sel_elem;
+  common.in2_pad_cumv_sel2_rowlow = 1;
+  common.in2_pad_cumv_sel2_rowhig =
+      common.in2_pad_cumv_rows - common.in_rows - 1;
+  common.in2_pad_cumv_sel2_collow = 1;
+  common.in2_pad_cumv_sel2_colhig = common.in2_pad_cumv_cols;
+  common.in2_sub_cumh_rows =
+      common.in2_pad_cumv_sel2_rowhig - common.in2_pad_cumv_sel2_rowlow + 1;
+  common.in2_sub_cumh_cols =
+      common.in2_pad_cumv_sel2_colhig - common.in2_pad_cumv_sel2_collow + 1;
+  common.in2_sub_cumh_elem =
+      common.in2_sub_cumh_rows * common.in2_sub_cumh_cols;
+  common.in2_sub_cumh_mem = sizeof(float) * common.in2_sub_cumh_elem;
+  common.in2_sub_cumh_sel_rowlow = 1;
+  common.in2_sub_cumh_sel_rowhig = common.in2_sub_cumh_rows;
+  common.in2_sub_cumh_sel_collow = 1 + common.in_cols;
+  common.in2_sub_cumh_sel_colhig = common.in2_sub_cumh_cols - 1;
+  common.in2_sub_cumh_sel_rows =
+      common.in2_sub_cumh_sel_rowhig - common.in2_sub_cumh_sel_rowlow + 1;
+  common.in2_sub_cumh_sel_cols =
+      common.in2_sub_cumh_sel_colhig - common.in2_sub_cumh_sel_collow + 1;
+  common.in2_sub_cumh_sel_elem =
+      common.in2_sub_cumh_sel_rows * common.in2_sub_cumh_sel_cols;
+  common.in2_sub_cumh_sel_mem = sizeof(float) * common.in2_sub_cumh_sel_elem;
+  common.in2_sub_cumh_sel2_rowlow = 1;
+  common.in2_sub_cumh_sel2_rowhig = common.in2_sub_cumh_rows;
+  common.in2_sub_cumh_sel2_collow = 1;
+  common.in2_sub_cumh_sel2_colhig =
+      common.in2_sub_cumh_cols - common.in_cols - 1;
+  common.in2_sub2_rows =
+      common.in2_sub_cumh_sel2_rowhig - common.in2_sub_cumh_sel2_rowlow + 1;
+  common.in2_sub2_cols =
+      common.in2_sub_cumh_sel2_colhig - common.in2_sub_cumh_sel2_collow + 1;
+  common.in2_sub2_elem = common.in2_sub2_rows * common.in2_sub2_cols;
+  common.in2_sub2_mem = sizeof(float) * common.in2_sub2_elem;
+  common.in2_sqr_rows = common.in2_rows;
+  common.in2_sqr_cols = common.in2_cols;
+  common.in2_sqr_elem = common.in2_elem;
+  common.in2_sqr_mem = common.in2_mem;
+  common.in2_sqr_sub2_rows = common.in2_sub2_rows;
+  common.in2_sqr_sub2_cols = common.in2_sub2_cols;
+  common.in2_sqr_sub2_elem = common.in2_sub2_elem;
+  common.in2_sqr_sub2_mem = common.in2_sub2_mem;
+  common.in_sqr_rows = common.in_rows;
+  common.in_sqr_cols = common.in_cols;
+  common.in_sqr_elem = common.in_elem;
+  common.in_sqr_mem = common.in_mem;
+  common.tMask_rows = common.in_rows + (common.sSize + 1 + common.sSize) - 1;
+  common.tMask_cols = common.tMask_rows;
+  common.tMask_elem = common.tMask_rows * common.tMask_cols;
+  common.tMask_mem = sizeof(float) * common.tMask_elem;
+  common.mask_rows = common.maxMove;
+  common.mask_cols = common.mask_rows;
+  common.mask_elem = common.mask_rows * common.mask_cols;
+  common.mask_mem = sizeof(float) * common.mask_elem;
+  common.mask_conv_rows = common.tMask_rows; // number of rows in I
+  common.mask_conv_cols = common.tMask_cols; // number of columns in I
+  common.mask_conv_elem =
+      common.mask_conv_rows * common.mask_conv_cols; // number of elements
+  common.mask_conv_mem = sizeof(float) * common.mask_conv_elem;
+  common.mask_conv_ioffset = (common.mask_rows - 1) / 2;
+  if ((common.mask_rows - 1) % 2 > 0.5) {
+    common.mask_conv_ioffset = common.mask_conv_ioffset + 1;
+  }
+  common.mask_conv_joffset = (common.mask_cols - 1) / 2;
+  if ((common.mask_cols - 1) % 2 > 0.5) {
+    common.mask_conv_joffset = common.mask_conv_joffset + 1;
+  }
+  // All kernels operations within kernel use same max size of threads. Size of
+  // block size is set to the size appropriate for max size operation (on padded
+  // matrix). Other use subsets of that.
+  threads.x = NUMBER_THREADS; // define the number of threads in the block
+  threads.y = 1;
+  blocks.x = common.allPoints; // define the number of blocks in the grid
+  blocks.y = 1;
 
-  // common
+  s_compute = std::chrono::high_resolution_clock::now();
+#ifdef BREAKDOWNS
+  s_b0 = std::chrono::high_resolution_clock::now();
+#endif
+  cudaMalloc((void **)&common_change.d_frame, common.frame_mem);
+  cudaMalloc((void **)&common.d_endoRow, common.endo_mem);
+  cudaMalloc((void **)&common.d_endoCol, common.endo_mem);
+  cudaMalloc((void **)&common.d_tEndoRowLoc, common.endo_mem * common.no_frames);
+  cudaMalloc((void **)&common.d_tEndoColLoc, common.endo_mem * common.no_frames);
+  cudaMalloc((void **)&common.d_epiRow, common.epi_mem);
+  cudaMalloc((void **)&common.d_epiCol, common.epi_mem);
+  cudaMalloc((void **)&common.d_tEpiRowLoc, common.epi_mem * common.no_frames);
+  cudaMalloc((void **)&common.d_tEpiColLoc, common.epi_mem * common.no_frames);
   cudaMalloc((void **)&common.d_endoT, common.in_mem * common.endoPoints);
   cudaMalloc((void **)&common.d_epiT, common.in_mem * common.epiPoints);
-
+  for (i = 0; i < common.allPoints; i++) {
+    cudaMalloc((void **)&unique[i].d_in2, common.in2_mem);
+  }
+  for (i = 0; i < common.allPoints; i++) {
+    cudaMalloc((void **)&unique[i].d_conv, common.conv_mem);
+  }
+  for (i = 0; i < common.allPoints; i++) {
+    cudaMalloc((void **)&unique[i].d_in2_pad_cumv, common.in2_pad_cumv_mem);
+  }
+  for (i = 0; i < common.allPoints; i++) {
+    cudaMalloc((void **)&unique[i].d_in2_pad_cumv_sel, common.in2_pad_cumv_sel_mem);
+  }
+  for (i = 0; i < common.allPoints; i++) {
+    cudaMalloc((void **)&unique[i].d_in2_sub_cumh, common.in2_sub_cumh_mem);
+  }
+  for (i = 0; i < common.allPoints; i++) {
+    cudaMalloc((void **)&unique[i].d_in2_sub_cumh_sel, common.in2_sub_cumh_sel_mem);
+  }
+  for (i = 0; i < common.allPoints; i++) {
+    cudaMalloc((void **)&unique[i].d_in2_sub2, common.in2_sub2_mem);
+  }
+  for (i = 0; i < common.allPoints; i++) {
+    cudaMalloc((void **)&unique[i].d_in2_sqr, common.in2_sqr_mem);
+  }
+  for (i = 0; i < common.allPoints; i++) {
+    cudaMalloc((void **)&unique[i].d_in2_sqr_sub2, common.in2_sqr_sub2_mem);
+  }
+  for (i = 0; i < common.allPoints; i++) {
+    cudaMalloc((void **)&unique[i].d_in_sqr, common.in_sqr_mem);
+  }
+  for (i = 0; i < common.allPoints; i++) {
+    cudaMalloc((void **)&unique[i].d_tMask, common.tMask_mem);
+  }
+  for (i = 0; i < common.allPoints; i++) {
+    cudaMalloc((void **)&unique[i].d_mask_conv, common.mask_conv_mem);
+  }
   for (i = 0; i < common.endoPoints; i++) {
     unique[i].point_no = i;
     unique[i].d_Row = common.d_endoRow;
@@ -319,210 +433,28 @@ int main(int argc, char *argv[]) {
     unique[i].d_tColLoc = common.d_tEpiColLoc;
     unique[i].d_T = common.d_epiT;
   }
-
-  // pointers
   for (i = 0; i < common.allPoints; i++) {
     unique[i].in_pointer = unique[i].point_no * common.in_elem;
   }
-
-  // common
-  common.in2_rows = 2 * common.sSize + 1;
-  common.in2_cols = 2 * common.sSize + 1;
-  common.in2_elem = common.in2_rows * common.in2_cols;
-  common.in2_mem = sizeof(float) * common.in2_elem;
-
-  // pointers
-  for (i = 0; i < common.allPoints; i++) {
-    cudaMalloc((void **)&unique[i].d_in2, common.in2_mem);
-  }
-
-  // common
-  common.conv_rows =
-      common.in_rows + common.in2_rows - 1; // number of rows in I
-  common.conv_cols =
-      common.in_cols + common.in2_cols - 1; // number of columns in I
-  common.conv_elem = common.conv_rows * common.conv_cols; // number of elements
-  common.conv_mem = sizeof(float) * common.conv_elem;
-  common.ioffset = 0;
-  common.joffset = 0;
-
-  // pointers
-  for (i = 0; i < common.allPoints; i++) {
-    cudaMalloc((void **)&unique[i].d_conv, common.conv_mem);
-  }
-
-  // common
-  common.in2_pad_add_rows = common.in_rows;
-  common.in2_pad_add_cols = common.in_cols;
-
-  common.in2_pad_cumv_rows = common.in2_rows + 2 * common.in2_pad_add_rows;
-  common.in2_pad_cumv_cols = common.in2_cols + 2 * common.in2_pad_add_cols;
-  common.in2_pad_cumv_elem =
-      common.in2_pad_cumv_rows * common.in2_pad_cumv_cols;
-  common.in2_pad_cumv_mem = sizeof(float) * common.in2_pad_cumv_elem;
-
-  // pointers
-  for (i = 0; i < common.allPoints; i++) {
-    cudaMalloc((void **)&unique[i].d_in2_pad_cumv, common.in2_pad_cumv_mem);
-  }
-
-  // common
-  common.in2_pad_cumv_sel_rowlow = 1 + common.in_rows; // (1 to n+1)
-  common.in2_pad_cumv_sel_rowhig = common.in2_pad_cumv_rows - 1;
-  common.in2_pad_cumv_sel_collow = 1;
-  common.in2_pad_cumv_sel_colhig = common.in2_pad_cumv_cols;
-  common.in2_pad_cumv_sel_rows =
-      common.in2_pad_cumv_sel_rowhig - common.in2_pad_cumv_sel_rowlow + 1;
-  common.in2_pad_cumv_sel_cols =
-      common.in2_pad_cumv_sel_colhig - common.in2_pad_cumv_sel_collow + 1;
-  common.in2_pad_cumv_sel_elem =
-      common.in2_pad_cumv_sel_rows * common.in2_pad_cumv_sel_cols;
-  common.in2_pad_cumv_sel_mem = sizeof(float) * common.in2_pad_cumv_sel_elem;
-
-  // pointers
-  for (i = 0; i < common.allPoints; i++) {
-    cudaMalloc((void **)&unique[i].d_in2_pad_cumv_sel,
-               common.in2_pad_cumv_sel_mem);
-  }
-  // common
-  common.in2_pad_cumv_sel2_rowlow = 1;
-  common.in2_pad_cumv_sel2_rowhig =
-      common.in2_pad_cumv_rows - common.in_rows - 1;
-  common.in2_pad_cumv_sel2_collow = 1;
-  common.in2_pad_cumv_sel2_colhig = common.in2_pad_cumv_cols;
-  common.in2_sub_cumh_rows =
-      common.in2_pad_cumv_sel2_rowhig - common.in2_pad_cumv_sel2_rowlow + 1;
-  common.in2_sub_cumh_cols =
-      common.in2_pad_cumv_sel2_colhig - common.in2_pad_cumv_sel2_collow + 1;
-  common.in2_sub_cumh_elem =
-      common.in2_sub_cumh_rows * common.in2_sub_cumh_cols;
-  common.in2_sub_cumh_mem = sizeof(float) * common.in2_sub_cumh_elem;
-
-  // pointers
-  for (i = 0; i < common.allPoints; i++) {
-    cudaMalloc((void **)&unique[i].d_in2_sub_cumh, common.in2_sub_cumh_mem);
-  }
-
-  // common
-  common.in2_sub_cumh_sel_rowlow = 1;
-  common.in2_sub_cumh_sel_rowhig = common.in2_sub_cumh_rows;
-  common.in2_sub_cumh_sel_collow = 1 + common.in_cols;
-  common.in2_sub_cumh_sel_colhig = common.in2_sub_cumh_cols - 1;
-  common.in2_sub_cumh_sel_rows =
-      common.in2_sub_cumh_sel_rowhig - common.in2_sub_cumh_sel_rowlow + 1;
-  common.in2_sub_cumh_sel_cols =
-      common.in2_sub_cumh_sel_colhig - common.in2_sub_cumh_sel_collow + 1;
-  common.in2_sub_cumh_sel_elem =
-      common.in2_sub_cumh_sel_rows * common.in2_sub_cumh_sel_cols;
-  common.in2_sub_cumh_sel_mem = sizeof(float) * common.in2_sub_cumh_sel_elem;
-
-  // pointers
-  for (i = 0; i < common.allPoints; i++) {
-    cudaMalloc((void **)&unique[i].d_in2_sub_cumh_sel,
-               common.in2_sub_cumh_sel_mem);
-  }
-
-  // common
-  common.in2_sub_cumh_sel2_rowlow = 1;
-  common.in2_sub_cumh_sel2_rowhig = common.in2_sub_cumh_rows;
-  common.in2_sub_cumh_sel2_collow = 1;
-  common.in2_sub_cumh_sel2_colhig =
-      common.in2_sub_cumh_cols - common.in_cols - 1;
-  common.in2_sub2_rows =
-      common.in2_sub_cumh_sel2_rowhig - common.in2_sub_cumh_sel2_rowlow + 1;
-  common.in2_sub2_cols =
-      common.in2_sub_cumh_sel2_colhig - common.in2_sub_cumh_sel2_collow + 1;
-  common.in2_sub2_elem = common.in2_sub2_rows * common.in2_sub2_cols;
-  common.in2_sub2_mem = sizeof(float) * common.in2_sub2_elem;
-
-  // pointers
-  for (i = 0; i < common.allPoints; i++) {
-    cudaMalloc((void **)&unique[i].d_in2_sub2, common.in2_sub2_mem);
-  }
-
-  // common
-  common.in2_sqr_rows = common.in2_rows;
-  common.in2_sqr_cols = common.in2_cols;
-  common.in2_sqr_elem = common.in2_elem;
-  common.in2_sqr_mem = common.in2_mem;
-
-  // pointers
-  for (i = 0; i < common.allPoints; i++) {
-    cudaMalloc((void **)&unique[i].d_in2_sqr, common.in2_sqr_mem);
-  }
-  // common
-  common.in2_sqr_sub2_rows = common.in2_sub2_rows;
-  common.in2_sqr_sub2_cols = common.in2_sub2_cols;
-  common.in2_sqr_sub2_elem = common.in2_sub2_elem;
-  common.in2_sqr_sub2_mem = common.in2_sub2_mem;
-
-  // pointers
-  for (i = 0; i < common.allPoints; i++) {
-    cudaMalloc((void **)&unique[i].d_in2_sqr_sub2, common.in2_sqr_sub2_mem);
-  }
-
-  // common
-  common.in_sqr_rows = common.in_rows;
-  common.in_sqr_cols = common.in_cols;
-  common.in_sqr_elem = common.in_elem;
-  common.in_sqr_mem = common.in_mem;
-
-  // pointers
-  for (i = 0; i < common.allPoints; i++) {
-    cudaMalloc((void **)&unique[i].d_in_sqr, common.in_sqr_mem);
-  }
-
-  // common
-  common.tMask_rows = common.in_rows + (common.sSize + 1 + common.sSize) - 1;
-  common.tMask_cols = common.tMask_rows;
-  common.tMask_elem = common.tMask_rows * common.tMask_cols;
-  common.tMask_mem = sizeof(float) * common.tMask_elem;
-
-  // pointers
-  for (i = 0; i < common.allPoints; i++) {
-    cudaMalloc((void **)&unique[i].d_tMask, common.tMask_mem);
-  }
-
-  // common
-  common.mask_rows = common.maxMove;
-  common.mask_cols = common.mask_rows;
-  common.mask_elem = common.mask_rows * common.mask_cols;
-  common.mask_mem = sizeof(float) * common.mask_elem;
-  // common
-  common.mask_conv_rows = common.tMask_rows; // number of rows in I
-  common.mask_conv_cols = common.tMask_cols; // number of columns in I
-  common.mask_conv_elem =
-      common.mask_conv_rows * common.mask_conv_cols; // number of elements
-  common.mask_conv_mem = sizeof(float) * common.mask_conv_elem;
-  common.mask_conv_ioffset = (common.mask_rows - 1) / 2;
-  if ((common.mask_rows - 1) % 2 > 0.5) {
-    common.mask_conv_ioffset = common.mask_conv_ioffset + 1;
-  }
-  common.mask_conv_joffset = (common.mask_cols - 1) / 2;
-  if ((common.mask_cols - 1) % 2 > 0.5) {
-    common.mask_conv_joffset = common.mask_conv_joffset + 1;
-  }
-
-  // pointers
-  for (i = 0; i < common.allPoints; i++) {
-    cudaMalloc((void **)&unique[i].d_mask_conv, common.mask_conv_mem);
-  }
-
-  // All kernels operations within kernel use same max size of threads. Size of
-  // block size is set to the size appropriate for max size operation (on padded
-  // matrix). Other use subsets of that.
-  threads.x = NUMBER_THREADS; // define the number of threads in the block
-  threads.y = 1;
-  blocks.x = common.allPoints; // define the number of blocks in the grid
-  blocks.y = 1;
-
-  cudaMemcpyToSymbol(d_common, &common, sizeof(params_common));
-  cudaMemcpyToSymbol(d_unique, &unique, sizeof(params_unique) * ALL_POINTS);
 #ifdef BREAKDOWNS
   cudaDeviceSynchronize();
   e_b0 = std::chrono::high_resolution_clock::now();
   s_b1 = std::chrono::high_resolution_clock::now();
 #endif
+
+  cudaMemcpy(common.d_endoRow, common.endoRow, common.endo_mem, cudaMemcpyHostToDevice);
+  cudaMemcpy(common.d_endoCol, common.endoCol, common.endo_mem, cudaMemcpyHostToDevice);
+  cudaMemcpy(common.d_epiRow, common.epiRow, common.epi_mem, cudaMemcpyHostToDevice);
+  cudaMemcpy(common.d_epiCol, common.epiCol, common.epi_mem, cudaMemcpyHostToDevice);
+  cudaMemcpyToSymbol(d_common, &common, sizeof(params_common));
+  cudaMemcpyToSymbol(d_unique, &unique, sizeof(params_unique) * ALL_POINTS);
+
+  #ifdef BREAKDOWNS
+  cudaDeviceSynchronize();
+  e_b1 = std::chrono::high_resolution_clock::now();
+  s_b2 = std::chrono::high_resolution_clock::now();
+#endif
+
   for (common_change.frame_no = 0; common_change.frame_no < frames_processed;
        common_change.frame_no++) {
 
@@ -548,8 +480,9 @@ int main(int argc, char *argv[]) {
     free(frame);
   }
 #ifdef BREAKDOWNS
-  e_b1 = std::chrono::high_resolution_clock::now();
-  s_b2 = std::chrono::high_resolution_clock::now();
+  cudaDeviceSynchronize();
+  e_b2 = std::chrono::high_resolution_clock::now();
+  s_b3 = std::chrono::high_resolution_clock::now();
 #endif
   cudaMemcpy(common.tEndoRowLoc, common.d_tEndoRowLoc,
              common.endo_mem * common.no_frames, cudaMemcpyDeviceToHost);
@@ -560,7 +493,10 @@ int main(int argc, char *argv[]) {
              common.epi_mem * common.no_frames, cudaMemcpyDeviceToHost);
   cudaMemcpy(common.tEpiColLoc, common.d_tEpiColLoc,
              common.epi_mem * common.no_frames, cudaMemcpyDeviceToHost);
-
+#ifdef BREAKDOWNS
+  e_b3 = std::chrono::high_resolution_clock::now();
+  s_b4 = std::chrono::high_resolution_clock::now();
+#endif
   // frame
   cudaFree(common_change.d_frame);
   cudaFree(common.d_endoRow);
@@ -592,19 +528,19 @@ int main(int argc, char *argv[]) {
   }
 #ifdef BREAKDOWNS
   cudaDeviceSynchronize();
-  e_b2 = std::chrono::high_resolution_clock::now();
+  e_b4 = std::chrono::high_resolution_clock::now();
 #endif
-  e_compute = std::chrono::high_resolution_clock::now();
-  std::chrono::duration<double, std::milli> compute_milli =
-      e_compute - s_compute;
-  std::cerr << "Computation: " << compute_milli.count() << " ms" << std::endl;
 
 #ifdef WARMUP
-  std::chrono::duration<double, std::milli> elapsed_milli_warmup =
-      end_warmup - start_warmup;
-  std::cerr << "Warmup time: " << elapsed_milli_warmup.count() << " ms"
-            << std::endl;
+  std::chrono::duration<double, std::milli> elapsed_milli_warmup = end_warmup - start_warmup;
+  std::cerr << "Warmup time: " << elapsed_milli_warmup.count() << " ms" << std::endl;
+  cudaStreamDestroy(stream);
 #endif
+
+  e_compute = std::chrono::high_resolution_clock::now();
+  std::chrono::duration<double, std::milli> compute_milli = e_compute - s_compute;
+  std::cerr << "Computation: " << compute_milli.count() << " ms" << std::endl;
+
   write_data("result.txt", common.no_frames, frames_processed,
              common.endoPoints, common.tEndoRowLoc, common.tEndoColLoc,
              common.epiPoints, common.tEpiRowLoc, common.tEpiColLoc);
@@ -617,19 +553,23 @@ int main(int argc, char *argv[]) {
   free(common.endoCol);
   free(common.tEndoRowLoc);
   free(common.tEndoColLoc);
+
   auto end_all = std::chrono::high_resolution_clock::now();
   std::chrono::duration<double, std::milli> elapsed_milli = end_all - start_all;
   std::cerr << "Elapsed time: " << elapsed_milli.count() << " ms" << std::endl;
+
 #ifdef BREAKDOWNS
   std::cerr << " ##### Breakdown Computation #####" << std::endl;
   std::chrono::duration<double, std::milli> allocation = e_b0 - s_b0;
-  std::cerr << "Allocation-Transfer time: " << allocation.count() << " ms"
-            << std::endl;
+  std::cerr << "Allocation time: " << allocation.count() << " ms" << std::endl;
   std::chrono::duration<double, std::milli> transfer = e_b1 - s_b1;
-  std::cerr << "Compute time: " << transfer.count() << " ms" << std::endl;
+  std::cerr << "H2D transfer (memcpy+memcpy2sym): " << transfer.count() << " ms" << std::endl;
   std::chrono::duration<double, std::milli> compute = e_b2 - s_b2;
-  std::cerr << "Transfer back-Free time: " << compute.count() << " ms"
-            << std::endl;
+  std::cerr << "Compute time (for loop including memcpy+host): " << compute.count() << " ms" << std::endl;
+  std::chrono::duration<double, std::milli> transfer_back = e_b3 - s_b3;
+  std::cerr << "D2H transfer time: " << transfer_back.count() << " ms" << std::endl;
+  std::chrono::duration<double, std::milli> freetime = e_b4 - s_b4;
+  std::cerr << "Free time: " << freetime.count() << " ms" << std::endl;
   std::cerr << " #################################" << std::endl;
 #endif
 }

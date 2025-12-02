@@ -4,7 +4,7 @@
 #include <iostream>
 #include <stdio.h>
 #include <vector>
-
+#include <cstring>
 #define min(a, b) a > b ? b : a
 #define ceilDiv(a, b) (a + b - 1) / b
 #define print(x) printf(#x ": %lu\n", (unsigned long)x)
@@ -337,7 +337,7 @@ int parseCommandline(int argc, char *argv[], char *filename, int *r, float *lat,
   int i;
   if (argc < 2)
     return 1; // error
-  strncpy(filename, argv[1], 100);
+  std::strncpy(filename, argv[1], 100);
   char flag;
 
   for (i = 1; i < argc; i++) {

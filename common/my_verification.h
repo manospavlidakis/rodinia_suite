@@ -8,7 +8,8 @@
 #include <errno.h>
 #include <float.h>
 #include <sys/stat.h>
-
+#include "util.h"
+#include "helper_hip.h"
 // #define MY_VERIFICATION_DISABLE to disable verification code
 
 #define MY_FP_STYLE_EQ(X, Y, ABS_TH, EPSILON, FP_MAX)                   \
@@ -47,10 +48,12 @@
 #define MY_VERIFY_DOUBLE_EXACT(ARRAY_PTR, SIZE)                         \
   _MY_VERIFY(ARRAY_PTR, #ARRAY_PTR, (SIZE), double, MY_FP_STYLE_EQ, "%.17g", DBL_MIN, (DBL_EPSILON * 256), DBL_MAX)
 
-#ifdef _MY_IS_HIP
-#define _MY_GPU_MEMCPY(HOST_MEM, ARRAY_PTR, TYPE, SIZE) hipMemcpy((HOST_MEM), (ARRAY_PTR), sizeof(TYPE) * (SIZE), hipMemcpyDeviceToHost)
+#if defined(__HIPCC__) || defined(__HIP_PLATFORM_AMD__) || defined(__HIP_PLATFORM_NVIDIA__)
+  #define _MY_GPU_MEMCPY(HOST_MEM, ARRAY_PTR, TYPE, SIZE) \
+    HIP_CHECK(hipMemcpy((HOST_MEM), (ARRAY_PTR), sizeof(TYPE) * (SIZE), hipMemcpyDeviceToHost))
 #else
-#define _MY_GPU_MEMCPY(HOST_MEM, ARRAY_PTR, TYPE, SIZE) cudaMemcpy((HOST_MEM), (ARRAY_PTR), sizeof(TYPE) * (SIZE), cudaMemcpyDeviceToHost)
+  #define _MY_GPU_MEMCPY(HOST_MEM, ARRAY_PTR, TYPE, SIZE) \
+    cudaMemcpy((HOST_MEM), (ARRAY_PTR), sizeof(TYPE) * (SIZE), cudaMemcpyDeviceToHost)
 #endif
 
 #ifdef MY_VERIFICATION_DISABLE
@@ -122,7 +125,8 @@
           exit(1); \
         } \
         void *data = malloc(__my_array_size); \
-        fread((void *) data, __my_type_size, __my_size, f); \
+        if (!data) { perror("malloc"); exit(1); } \
+        FREAD_CHECK((void *) data, __my_type_size, __my_size, f); \
         int pass = 1; \
         TYPE *el, *correct; \
         double largest_absolute_error = 0, largest_relative_error = 0, largest_relative_error_nonzero = 0; \

@@ -26,7 +26,8 @@ std::chrono::high_resolution_clock::time_point s_b2;
 std::chrono::high_resolution_clock::time_point e_b2;
 std::chrono::high_resolution_clock::time_point s_b3;
 std::chrono::high_resolution_clock::time_point e_b3;
-
+std::chrono::high_resolution_clock::time_point s_b4;
+std::chrono::high_resolution_clock::time_point e_b4;
 #endif
 
 // declaration, forward
@@ -271,17 +272,22 @@ void runTest(int argc, char **argv) {
 */
 #ifdef BREAKDOWNS
   e_b3 = std::chrono::high_resolution_clock::now();
+  s_b4 = std::chrono::high_resolution_clock::now();
 #endif
 
   // #define TRACEBACK
   cudaFree(referrence_cuda);
   cudaFree(matrix_cuda);
+#ifdef BREAKDOWNS
+  e_b4 = std::chrono::high_resolution_clock::now();
+#endif
+
   e_compute = std::chrono::high_resolution_clock::now();
 #ifdef OUTPUT
   FILE *fpo = fopen("result.txt", "w");
   fprintf(fpo, "print traceback value GPU:\n");
 
-  for (int i = max_rows - 2, j = max_rows - 2; i >= 0, j >= 0;) {
+  for (int i = max_rows - 2, j = max_rows - 2; i >= 0 && j >= 0;) {
     int nw, n, w, traceback;
     if (i == max_rows - 2 && j == max_rows - 2)
       fprintf(fpo, "%d ",
@@ -347,33 +353,29 @@ void runTest(int argc, char **argv) {
 
   auto end = std::chrono::high_resolution_clock::now();
   std::chrono::duration<double, std::milli> elapsed_milli_0 = end_0 - start_0;
-  std::cerr << "Init time: " << elapsed_milli_0.count() << " ms" << std::endl;
-
-  std::chrono::duration<double, std::milli> compute_milli =
-      e_compute - s_compute;
+  //std::cerr << "Init time: " << elapsed_milli_0.count() << " ms" << std::endl;
+#ifdef WARMUP
+  std::chrono::duration<double, std::milli> elapsed_milli_warmup = end_warmup - start_warmup;
+  std::cerr << "Warmup time: " << elapsed_milli_warmup.count() << " ms" << std::endl;
+  cudaStreamDestroy(stream);
+#endif
+  std::chrono::duration<double, std::milli> compute_milli = e_compute - s_compute;
   std::cerr << "Computation: " << compute_milli.count() << " ms" << std::endl;
-
+  std::chrono::duration<double, std::milli> elapsed_milli = end - start;
+  std::cerr << "Elapsed time: " << elapsed_milli.count() << " ms" << std::endl;
 #ifdef BREAKDOWNS
   std::cerr << " ##### Breakdown Computation #####" << std::endl;
   std::chrono::duration<double, std::milli> allocation = e_b0 - s_b0;
   std::cerr << "Allocation time: " << allocation.count() << " ms" << std::endl;
   std::chrono::duration<double, std::milli> transfer = e_b2 - s_b2;
-  std::cerr << "Transfer time: " << transfer.count() << " ms" << std::endl;
+  std::cerr << "H2D transfer time: " << transfer.count() << " ms" << std::endl;
   std::chrono::duration<double, std::milli> compute = e_b1 - s_b1;
   std::cerr << "Compute time: " << compute.count() << " ms" << std::endl;
   std::chrono::duration<double, std::milli> transfer2 = e_b3 - s_b3;
-  std::cerr << "Transfer Back time: " << transfer2.count() << " ms"
-            << std::endl;
+  std::cerr << "D2H transfer time: " << transfer2.count() << " ms" << std::endl;
+  std::chrono::duration<double, std::milli> freetime = e_b4 - s_b4;
+  std::cerr << "Free time: " << freetime.count() << " ms" << std::endl;
   std::cerr << " #################################" << std::endl;
 #endif
 
-  std::chrono::duration<double, std::milli> elapsed_milli = end - start;
-  std::cerr << "Elapsed time: " << elapsed_milli.count() << " ms" << std::endl;
-
-#ifdef WARMUP
-  std::chrono::duration<double, std::milli> elapsed_milli_warmup =
-      end_warmup - start_warmup;
-  std::cerr << "Warmup time: " << elapsed_milli_warmup.count() << " ms"
-            << std::endl;
-#endif
 }

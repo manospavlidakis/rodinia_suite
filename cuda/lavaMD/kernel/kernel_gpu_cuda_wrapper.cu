@@ -14,7 +14,8 @@ std::chrono::high_resolution_clock::time_point s_b2;
 std::chrono::high_resolution_clock::time_point e_b2;
 std::chrono::high_resolution_clock::time_point s_b3;
 std::chrono::high_resolution_clock::time_point e_b3;
-  
+std::chrono::high_resolution_clock::time_point s_b4;
+std::chrono::high_resolution_clock::time_point e_b4;
 #endif
 
 
@@ -70,22 +71,29 @@ void kernel_gpu_cuda_wrapper(par_str par_cpu, dim_str dim_cpu, box_str *box_cpu,
   cudaMemcpy(fv_cpu, d_fv_gpu, dim_cpu.space_mem, cudaMemcpyDeviceToHost);
 #ifdef BREAKDOWNS
   e_b3 = std::chrono::high_resolution_clock::now();
-#endif
-  #ifdef BREAKDOWNS
-  std::cerr << " ##### Breakdown Computation #####" << std::endl;
-  std::chrono::duration<double, std::milli> allocation = e_b0 - s_b0;
-  std::cerr << "Allocation time: " << allocation.count() << " ms" << std::endl;
-  std::chrono::duration<double, std::milli> transfer = e_b2 - s_b2;
-  std::cerr << "Transfer time: " << transfer.count() << " ms" << std::endl;
-  std::chrono::duration<double, std::milli> compute = e_b1 - s_b1;
-  std::cerr << "Compute time: " << compute.count() << " ms" << std::endl;
-  std::chrono::duration<double, std::milli> transfer2 = e_b3 - s_b3;
-  std::cerr << "Transfer Back time: " << transfer2.count() << " ms"
-            << std::endl;
-  std::cerr << " #################################" << std::endl;
+  s_b4 = std::chrono::high_resolution_clock::now();
 #endif
   cudaFree(d_rv_gpu);
   cudaFree(d_qv_gpu);
   cudaFree(d_fv_gpu);
   cudaFree(d_box_gpu);
+#ifdef BREAKDOWNS
+  e_b4 = std::chrono::high_resolution_clock::now();
+#endif
+
+  #ifdef BREAKDOWNS
+  std::cerr << " ##### Breakdown Computation #####" << std::endl;
+  std::chrono::duration<double, std::milli> allocation = e_b0 - s_b0;
+  std::cerr << "Allocation time: " << allocation.count() << " ms" << std::endl;
+  std::chrono::duration<double, std::milli> transfer = e_b2 - s_b2;
+  std::cerr << "H2D transfer time: " << transfer.count() << " ms" << std::endl;
+  std::chrono::duration<double, std::milli> compute = e_b1 - s_b1;
+  std::cerr << "Compute time: " << compute.count() << " ms" << std::endl;
+  std::chrono::duration<double, std::milli> transfer2 = e_b3 - s_b3;
+  std::cerr << "D2H transfer Back time: " << transfer2.count() << " ms"
+            << std::endl;
+  std::chrono::duration<double, std::milli> freetime = e_b4 - s_b4;
+  std::cerr << "Free time: " << freetime.count() << " ms" << std::endl;
+  std::cerr << " #################################" << std::endl;
+#endif
 }

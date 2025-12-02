@@ -12,9 +12,9 @@ all: cfd
 
 # Specific build rules
 cfd: euler3d.o
-	$(CC) $(CXXFLAGS)  euler3d.o -o cfd -L$(CUDA_LIB_DIR)
+	$(CC) $(CXXFLAGS) $(GENCODE_FLAGS) euler3d.o -o cfd -L$(CUDA_LIB_DIR)
 euler3d.o: euler3d.cu
-	$(CC) $(CXXFLAGS) -c euler3d.cu $(GENCODE_FLAGS) -o euler3d.o -I$(INCLUDE) -L$(CUDA_LIB_DIR) 
+	$(CC) $(CXXFLAGS) -c euler3d.cu $(GENCODE_FLAGS) -o euler3d.o -I$(INCLUDE) -L$(CUDA_LIB_DIR)
 
 #euler3d_double: euler3d_double.o
 #	$(CC) euler3d_double.o -o euler3d_double -L$(CUDA_LIB_DIR) -lcudart
@@ -36,5 +36,4 @@ euler3d.o: euler3d.cu
 
 # Clean rule
 clean:
-	rm -f cfd *.o *.linkinfo result_density.txt result_momentum.txt result_density_energy.txt
-
+	@rm -f cfd *.o *.linkinfo result_density.txt result_momentum.txt result_density_energy.txt

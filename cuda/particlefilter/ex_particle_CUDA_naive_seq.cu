@@ -1,7 +1,7 @@
 /**
  * @file ex_particle_OPENMP_seq.c
  * @author Michael Trotter & Matt Goodrum
- * @brief Particle filter implementation in C/OpenMP 
+ * @brief Particle filter implementation in C/OpenMP
  */
 #include <stdio.h>
 #include <stdlib.h>
@@ -113,12 +113,12 @@ __device__ int findIndexBin(double * CDF, int beginIndex, int endIndex, double v
 __global__ void kernel(double * arrayX, double * arrayY, double * CDF, double * u, double * xj, double * yj, int Nparticles){
 	int block_id = blockIdx.x;// + gridDim.x * blockIdx.y;
 	int i = blockDim.x * block_id + threadIdx.x;
-	
+
 	if(i < Nparticles){
-	
+
 		int index = -1;
 		int x;
-		
+
 		for(x = 0; x < Nparticles; x++){
 			if(CDF[x] >= u[i]){
 				index = x;
@@ -128,13 +128,13 @@ __global__ void kernel(double * arrayX, double * arrayY, double * CDF, double * 
 		if(index == -1){
 			index = Nparticles-1;
 		}
-		
+
 		xj[i] = arrayX[index];
 		yj[i] = arrayY[index];
-		
+
 	}
 }
-/** 
+/**
 * Takes in a double and returns an integer that approximates to that double
 * @return if the mantissa < .5 => return value < input value; else return value > input value
 */
@@ -328,7 +328,7 @@ void videoSequence(int * I, int IszX, int IszY, int Nfr, int * seed){
 	int x0 = (int)roundDouble(IszY/2.0);
 	int y0 = (int)roundDouble(IszX/2.0);
 	I[x0 *IszY *Nfr + y0 * Nfr  + 0] = 1;
-	
+
 	/*move point*/
 	int xk, yk, pos;
 	for(k = 1; k < Nfr; k++){
@@ -339,7 +339,7 @@ void videoSequence(int * I, int IszX, int IszY, int Nfr, int * seed){
 		pos = 0;
 		I[pos] = 1;
 	}
-	
+
 	/*dilate matrix*/
 	int * newMatrix = (int *)malloc(sizeof(int)*IszX*IszY*Nfr);
 	imdilate_disk(I, IszX, IszY, Nfr, 5, newMatrix);
@@ -352,7 +352,7 @@ void videoSequence(int * I, int IszX, int IszY, int Nfr, int * seed){
 		}
 	}
 	free(newMatrix);
-	
+
 	/*define background, add noise*/
 	setIf(0, 100, I, &IszX, &IszY, &Nfr);
 	setIf(1, 228, I, &IszX, &IszY, &Nfr);
@@ -412,7 +412,7 @@ void particleFilter(int * I, int IszX, int IszY, int Nfr, int * seed, int Nparti
 	//original particle centroid
 	double xe = roundDouble(IszY/2.0);
 	double ye = roundDouble(IszX/2.0);
-	
+
 	//expected object locations, compared to center
 	int radius = 5;
 	int diameter = radius*2 - 1;
@@ -428,7 +428,7 @@ void particleFilter(int * I, int IszX, int IszY, int Nfr, int * seed, int Nparti
 	}
 	double * objxy = (double *)malloc(countOnes*2*sizeof(double));
 	getneighbors(disk, countOnes, objxy, radius);
-	
+
 	long long get_neighbors = get_time();
 	printf("TIME TO GET NEIGHBORS TOOK: %f\n", elapsed_time(start, get_neighbors));
 	//initial weights are all equal (1/Nparticles)
@@ -445,18 +445,18 @@ void particleFilter(int * I, int IszX, int IszY, int Nfr, int * seed, int Nparti
 	double * xj = (double *)malloc(sizeof(double)*Nparticles);
 	double * yj = (double *)malloc(sizeof(double)*Nparticles);
 	double * CDF = (double *)malloc(sizeof(double)*Nparticles);
-	
+
 	//GPU copies of arrays
 	double * arrayX_GPU;
 	double * arrayY_GPU;
 	double * xj_GPU;
 	double * yj_GPU;
 	double * CDF_GPU;
-	
+
 	int * ind = (int*)malloc(sizeof(int)*countOnes);
 	double * u = (double *)malloc(sizeof(double)*Nparticles);
 	double * u_GPU;
-	
+
 	//CUDA memory allocation
 	check_error(cudaMalloc((void **) &arrayX_GPU, sizeof(double)*Nparticles));
 	check_error(cudaMalloc((void **) &arrayY_GPU, sizeof(double)*Nparticles));
@@ -464,7 +464,7 @@ void particleFilter(int * I, int IszX, int IszY, int Nfr, int * seed, int Nparti
 	check_error(cudaMalloc((void **) &yj_GPU, sizeof(double)*Nparticles));
 	check_error(cudaMalloc((void **) &CDF_GPU, sizeof(double)*Nparticles));
 	check_error(cudaMalloc((void **) &u_GPU, sizeof(double)*Nparticles));
-	
+
 	for(x = 0; x < Nparticles; x++){
 		arrayX[x] = xe;
 		arrayY[x] = ye;
@@ -478,7 +478,7 @@ void particleFilter(int * I, int IszX, int IszY, int Nfr, int * seed, int Nparti
 		//apply motion model
 		//draws sample from motion model (random walk). The only prior information
 		//is that the object moves 2x as fast as in the y direction
-		
+
 		for(x = 0; x < Nparticles; x++){
 			arrayX[x] = arrayX[x] + 1.0 + 5.0*randn(seed, x);
 			arrayY[x] = arrayY[x] - 2.0 + 2.0*randn(seed, x);
@@ -487,11 +487,11 @@ void particleFilter(int * I, int IszX, int IszY, int Nfr, int * seed, int Nparti
 		long long error = get_time();
 		//printf("TIME TO SET ERROR TOOK: %f\n", elapsed_time(set_arrays, error));
 		for(x = 0; x < Nparticles; x++){
-		
+
 			//compute the likelihood: remember our assumption is that you know
 			// foreground and the background image intensity distribution.
 			// Notice that we consider here a likelihood ratio, instead of
-			// p(z|x). It is possible in this case. why? a hometask for you.		
+			// p(z|x). It is possible in this case. why? a hometask for you.
 			//calc ind
 			for(y = 0; y < countOnes; y++){
 				indX = roundDouble(arrayX[x]) + objxy[y*2 + 1];
@@ -506,13 +506,13 @@ void particleFilter(int * I, int IszX, int IszY, int Nfr, int * seed, int Nparti
 		long long likelihood_time = get_time();
 		//printf("TIME TO GET LIKELIHOODS TOOK: %f\n", elapsed_time(error, likelihood_time));
 		// update & normalize weights
-		// using equation (63) of Arulampalam Tutorial		
+		// using equation (63) of Arulampalam Tutorial
 		for(x = 0; x < Nparticles; x++){
 			weights[x] = weights[x] * exp(likelihood[x]);
 		}
 		long long exponential = get_time();
 		//printf("TIME TO GET EXP TOOK: %f\n", elapsed_time(likelihood_time, exponential));
-		double sumWeights = 0;	
+		double sumWeights = 0;
 		for(x = 0; x < Nparticles; x++){
 			sumWeights += weights[x];
 		}
@@ -537,12 +537,12 @@ void particleFilter(int * I, int IszX, int IszY, int Nfr, int * seed, int Nparti
 		double distance = sqrt( pow((double)(xe-(int)roundDouble(IszY/2.0)),2) + pow((double)(ye-(int)roundDouble(IszX/2.0)),2) );
 		//printf("%lf\n", distance);
 		//display(hold off for now)
-		
+
 		//pause(hold off for now)
-		
+
 		//resampling
-		
-		
+
+
 		CDF[0] = weights[0];
 		for(x = 1; x < Nparticles; x++){
 			CDF[x] = weights[x] + CDF[x-1];
@@ -566,11 +566,11 @@ void particleFilter(int * I, int IszX, int IszY, int Nfr, int * seed, int Nparti
 		long long end_copy = get_time();
 		//Set number of threads
 		int num_blocks = ceil((double) Nparticles/(double) threads_per_block);
-		
+
 		//KERNEL FUNCTION CALL
 		kernel <<< num_blocks, threads_per_block >>> (arrayX_GPU, arrayY_GPU, CDF_GPU, u_GPU, xj_GPU, yj_GPU, Nparticles);
-                cudaThreadSynchronize();
-                long long start_copy_back = get_time();
+        cudaDeviceSynchronize();
+        long long start_copy_back = get_time();
 		//CUDA memory copying back from GPU to CPU memory
 		cudaMemcpy(yj, yj_GPU, sizeof(double)*Nparticles, cudaMemcpyDeviceToHost);
 		cudaMemcpy(xj, xj_GPU, sizeof(double)*Nparticles, cudaMemcpyDeviceToHost);
@@ -580,7 +580,7 @@ void particleFilter(int * I, int IszX, int IszY, int Nfr, int * seed, int Nparti
 		//printf("SENDING BACK FROM GPU TOOK: %lf\n", elapsed_time(start_copy_back, end_copy_back));
 		long long xyj_time = get_time();
 		//printf("TIME TO CALC NEW ARRAY X AND Y TOOK: %f\n", elapsed_time(u_time, xyj_time));
-		
+
 		for(x = 0; x < Nparticles; x++){
 			//reassign arrayX and arrayY
 			arrayX[x] = xj[x];
@@ -590,7 +590,7 @@ void particleFilter(int * I, int IszX, int IszY, int Nfr, int * seed, int Nparti
 		long long reset = get_time();
 		//printf("TIME TO RESET WEIGHTS TOOK: %f\n", elapsed_time(xyj_time, reset));
 	}
-	
+
 	//CUDA freeing of memory
 	cudaFree(u_GPU);
 	cudaFree(CDF_GPU);
@@ -598,7 +598,7 @@ void particleFilter(int * I, int IszX, int IszY, int Nfr, int * seed, int Nparti
 	cudaFree(xj_GPU);
 	cudaFree(arrayY_GPU);
 	cudaFree(arrayX_GPU);
-	
+
 	//free memory
 	free(disk);
 	free(objxy);
@@ -613,7 +613,7 @@ void particleFilter(int * I, int IszX, int IszY, int Nfr, int * seed, int Nparti
 	free(ind);
 }
 int main(int argc, char * argv[]){
-	
+
 	char* usage = "naive.out -x <dimX> -y <dimY> -z <Nfr> -np <Nparticles>";
 	//check number of arguments
 	if(argc != 9)
@@ -626,48 +626,48 @@ int main(int argc, char * argv[]){
 		printf( "%s\n",usage );
 		return 0;
 	}
-	
+
 	int IszX, IszY, Nfr, Nparticles;
-	
+
 	//converting a string to a integer
 	if( sscanf( argv[2], "%d", &IszX ) == EOF ) {
 	   printf("ERROR: dimX input is incorrect");
 	   return 0;
 	}
-	
+
 	if( IszX <= 0 ) {
 		printf("dimX must be > 0\n");
 		return 0;
 	}
-	
+
 	//converting a string to a integer
 	if( sscanf( argv[4], "%d", &IszY ) == EOF ) {
 	   printf("ERROR: dimY input is incorrect");
 	   return 0;
 	}
-	
+
 	if( IszY <= 0 ) {
 		printf("dimY must be > 0\n");
 		return 0;
 	}
-	
+
 	//converting a string to a integer
 	if( sscanf( argv[6], "%d", &Nfr ) == EOF ) {
 	   printf("ERROR: Number of frames input is incorrect");
 	   return 0;
 	}
-	
+
 	if( Nfr <= 0 ) {
 		printf("number of frames must be > 0\n");
 		return 0;
 	}
-	
+
 	//converting a string to a integer
 	if( sscanf( argv[8], "%d", &Nparticles ) == EOF ) {
 	   printf("ERROR: Number of particles input is incorrect");
 	   return 0;
 	}
-	
+
 	if( Nparticles <= 0 ) {
 		printf("Number of particles must be > 0\n");
 		return 0;
@@ -689,7 +689,7 @@ int main(int argc, char * argv[]){
 	long long endParticleFilter = get_time();
 	printf("PARTICLE FILTER TOOK %f\n", elapsed_time(endVideoSequence, endParticleFilter));
 	printf("ENTIRE PROGRAM TOOK %f\n", elapsed_time(start, endParticleFilter));
-	
+
 	free(seed);
 	free(I);
 	return 0;

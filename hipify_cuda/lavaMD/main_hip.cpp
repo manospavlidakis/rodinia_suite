@@ -2,7 +2,7 @@
 #include "hip/hip_runtime.h"
 #include "kernel/kernel_gpu_cuda_wrapper.h"
 #include <chrono>
-
+#include <cstring>
 #include <iostream>
 #include <stdbool.h>
 #include <stdint.h>
@@ -51,7 +51,7 @@ int main(int argc, char *argv[]) {
   // go through arguments
   for (dim_cpu.cur_arg = 1; dim_cpu.cur_arg < argc; dim_cpu.cur_arg++) {
     // check if -boxes1d
-    if (strcmp(argv[dim_cpu.cur_arg], "-boxes1d") == 0) {
+    if (std::strcmp(argv[dim_cpu.cur_arg], "-boxes1d") == 0) {
       // check if value provided
       if (argc >= dim_cpu.cur_arg + 1) {
         // check if value is a number

@@ -19,6 +19,10 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <cstdio>
+#include <cstring>
+#include "../../common/util.h"
+
 #define RED "\033[1;31m"
 #define RESET "\033[0m"
 #define CUDA_ERROR_FATAL_RUNTIME(err)                                          \
@@ -51,7 +55,8 @@ std::chrono::high_resolution_clock::time_point s_b2;
 std::chrono::high_resolution_clock::time_point e_b2;
 std::chrono::high_resolution_clock::time_point s_b3;
 std::chrono::high_resolution_clock::time_point e_b3;
-
+std::chrono::high_resolution_clock::time_point s_b4;
+std::chrono::high_resolution_clock::time_point e_b4;
 #endif
 
 #ifdef RD_WG_SIZE_0_0
@@ -227,25 +232,25 @@ int main(int argc, char *argv[]) {
   free(finalVec);
   auto end = std::chrono::high_resolution_clock::now();
   std::chrono::duration<double, std::milli> elapsed_milli_0 = end_0 - start_0;
-  std::cerr << "Init time: " << elapsed_milli_0.count() << " ms" << std::endl;
+  //std::cerr << "Init time: " << elapsed_milli_0.count() << " ms" << std::endl;
 
   std::chrono::duration<double, std::milli> compute_milli =
       e_compute - s_compute;
   std::cerr << "Computation: " << compute_milli.count() << " ms" << std::endl;
 
 #ifdef BREAKDOWNS
-  std::cerr << " ##### Breakdown Computation #####" << std::endl;
+  std::cerr << "##### Breakdown Computation #####" << std::endl;
   std::chrono::duration<double, std::milli> allocation = e_b0 - s_b0;
   std::cerr << "Allocation time: " << allocation.count() << " ms" << std::endl;
   std::chrono::duration<double, std::milli> transfer = e_b2 - s_b2;
-  std::cerr << "Transfer time: " << transfer.count() << " ms" << std::endl;
+  std::cerr << "H2D transfer time: " << transfer.count() << " ms" << std::endl;
   std::chrono::duration<double, std::milli> compute = e_b1 - s_b1;
   std::cerr << "Compute time: " << compute.count() << " ms" << std::endl;
   std::chrono::duration<double, std::milli> transfer2 = e_b3 - s_b3;
-  std::cerr << "Transfer Back time: " << transfer2.count() << " ms"
-            << std::endl;
-
-  std::cerr << " #################################" << std::endl;
+  std::cerr << "D2H transfer time: " << transfer2.count() << " ms"<< std::endl;
+  std::chrono::duration<double, std::milli> freetime = e_b4 - s_b4;
+  std::cerr << "Free time: " << freetime.count() << " ms"<< std::endl;
+  std::cerr << "#################################" << std::endl;
 #endif
 
   std::chrono::duration<double, std::milli> elapsed_milli = end - start;
@@ -265,41 +270,66 @@ void PrintDeviceProperties() {
   cudaDeviceProp deviceProp;
   int nDevCount = 0;
 
-  cudaGetDeviceCount(&nDevCount);
-  printf("Total Device found: %d", nDevCount);
+  cudaError_t st = cudaGetDeviceCount(&nDevCount);
+  if (st != cudaSuccess) {
+    std::printf("cudaGetDeviceCount failed: %s\n", cudaGetErrorString(st));
+    return;
+  }
+
+  std::printf("Total Device found: %d", nDevCount);
+
   for (int nDeviceIdx = 0; nDeviceIdx < nDevCount; ++nDeviceIdx) {
-    memset(&deviceProp, 0, sizeof(deviceProp));
-    if (cudaSuccess == cudaGetDeviceProperties(&deviceProp, nDeviceIdx)) {
-      printf("\nDevice Name \t\t - %s ", deviceProp.name);
-      printf("\n**************************************");
-      printf("\nTotal Global Memory\t\t\t - %lu KB",
-             deviceProp.totalGlobalMem / 1024);
-      printf("\nShared memory available per block \t - %lu KB",
-             deviceProp.sharedMemPerBlock / 1024);
-      printf("\nNumber of registers per thread block \t - %d",
-             deviceProp.regsPerBlock);
-      printf("\nWarp size in threads \t\t\t - %d", deviceProp.warpSize);
-      printf("\nMemory Pitch \t\t\t\t - %zu bytes", deviceProp.memPitch);
-      printf("\nMaximum threads per block \t\t - %d",
-             deviceProp.maxThreadsPerBlock);
-      printf("\nMaximum Thread Dimension (block) \t - %d %d %d",
-             deviceProp.maxThreadsDim[0], deviceProp.maxThreadsDim[1],
-             deviceProp.maxThreadsDim[2]);
-      printf("\nMaximum Thread Dimension (grid) \t - %d %d %d",
-             deviceProp.maxGridSize[0], deviceProp.maxGridSize[1],
-             deviceProp.maxGridSize[2]);
-      printf("\nTotal constant memory \t\t\t - %zu bytes",
-             deviceProp.totalConstMem);
-      printf("\nCUDA ver \t\t\t\t - %d.%d", deviceProp.major, deviceProp.minor);
-      printf("\nClock rate \t\t\t\t - %d KHz", deviceProp.clockRate);
-      printf("\nTexture Alignment \t\t\t - %zu bytes",
-             deviceProp.textureAlignment);
-      printf("\nDevice Overlap \t\t\t\t - %s",
-             deviceProp.deviceOverlap ? "Allowed" : "Not Allowed");
-      printf("\nNumber of Multi processors \t\t - %d\n\n",
-             deviceProp.multiProcessorCount);
-    } else
-      printf("\n%s", cudaGetErrorString(cudaGetLastError()));
+    std::memset(&deviceProp, 0, sizeof(deviceProp));
+
+    st = cudaGetDeviceProperties(&deviceProp, nDeviceIdx);
+    if (st != cudaSuccess) {
+      std::printf("\nDevice %d: cudaGetDeviceProperties failed: %s\n",
+                  nDeviceIdx, cudaGetErrorString(st));
+      continue;
+    }
+
+    // CUDA 13 removed some cudaDeviceProp members (e.g., clockRate, deviceOverlap).
+    // Use cudaDeviceGetAttribute instead (works on older CUDA too).
+    int clockRateKHz = 0;
+    (void)cudaDeviceGetAttribute(&clockRateKHz, cudaDevAttrClockRate, nDeviceIdx);
+
+    int gpuOverlap = 0;
+    (void)cudaDeviceGetAttribute(&gpuOverlap, cudaDevAttrGpuOverlap, nDeviceIdx);
+
+    std::printf("\nDevice Name \t\t - %s ", deviceProp.name);
+    std::printf("\n**************************************");
+    std::printf("\nTotal Global Memory\t\t\t - %llu KB",
+                static_cast<unsigned long long>(deviceProp.totalGlobalMem / 1024));
+    std::printf("\nShared memory available per block \t - %llu KB",
+                static_cast<unsigned long long>(deviceProp.sharedMemPerBlock / 1024));
+    std::printf("\nNumber of registers per thread block \t - %d",
+                deviceProp.regsPerBlock);
+    std::printf("\nWarp size in threads \t\t\t - %d", deviceProp.warpSize);
+    std::printf("\nMemory Pitch \t\t\t\t - %zu bytes", deviceProp.memPitch);
+    std::printf("\nMaximum threads per block \t\t - %d",
+                deviceProp.maxThreadsPerBlock);
+    std::printf("\nMaximum Thread Dimension (block) \t - %d %d %d",
+                deviceProp.maxThreadsDim[0], deviceProp.maxThreadsDim[1],
+                deviceProp.maxThreadsDim[2]);
+    std::printf("\nMaximum Thread Dimension (grid) \t - %d %d %d",
+                deviceProp.maxGridSize[0], deviceProp.maxGridSize[1],
+                deviceProp.maxGridSize[2]);
+    std::printf("\nTotal constant memory \t\t\t - %zu bytes",
+                deviceProp.totalConstMem);
+    std::printf("\nCUDA ver \t\t\t\t - %d.%d", deviceProp.major, deviceProp.minor);
+
+    // CUDA 13 compatible:
+    std::printf("\nClock rate \t\t\t\t - %d KHz", clockRateKHz);
+
+    std::printf("\nTexture Alignment \t\t\t - %zu bytes",
+                deviceProp.textureAlignment);
+
+    // CUDA 13 compatible:
+    std::printf("\nDevice Overlap \t\t\t\t - %s",
+                gpuOverlap ? "Allowed" : "Not Allowed");
+
+    std::printf("\nNumber of Multi processors \t\t - %d\n\n",
+                deviceProp.multiProcessorCount);
   }
 }
 
@@ -320,7 +350,7 @@ void InitProblemOnce(char *filename) {
 
   fp = fopen(filename, "r");
 
-  fscanf(fp, "%d", &Size);
+  FSCANF_CHECK(fp, "%d", &Size);
 
   a = (float *)malloc(Size * Size * sizeof(float));
 
@@ -426,10 +456,9 @@ void ForwardSub() {
 
 #ifdef BREAKDOWNS
   e_b2 = std::chrono::high_resolution_clock::now();
-  double data_size = (2 * (Size * Size * sizeof(float))) + Size * sizeof(float);
-  std::cerr << std::fixed << " Data size: " << data_size / 1024 / 1024 << " MB"
-            << std::endl;
-
+  // double data_size = (2 * (Size * Size * sizeof(float))) + Size * sizeof(float);
+  // std::cerr << std::fixed << " Data size: " << data_size / 1024 / 1024 << " MB"
+  //           << std::endl;
   s_b1 = std::chrono::high_resolution_clock::now();
 #endif
 
@@ -453,12 +482,11 @@ void ForwardSub() {
   for (t = 0; t < (Size - 1); t++) {
     Fan1<<<dimGrid, dimBlock>>>(m_cuda, a_cuda, Size, t);
     Fan2<<<dimGridXY, dimBlockXY>>>(m_cuda, a_cuda, b_cuda, Size, Size - t, t);
-    // cudaThreadSynchronize();
     checkCUDAError("Fan2");
   }
   CUDA_ERROR_FATAL_RUNTIME(cudaDeviceSynchronize());
+
 #ifdef BREAKDOWNS
-  cudaDeviceSynchronize();
   e_b1 = std::chrono::high_resolution_clock::now();
   s_b3 = std::chrono::high_resolution_clock::now();
 #endif
@@ -468,15 +496,22 @@ void ForwardSub() {
                                       cudaMemcpyDeviceToHost));
   CUDA_ERROR_FATAL_RUNTIME(cudaMemcpy(a, a_cuda, Size * Size * sizeof(float),
                                       cudaMemcpyDeviceToHost));
-  CUDA_ERROR_FATAL_RUNTIME(
-      cudaMemcpy(b, b_cuda, Size * sizeof(float), cudaMemcpyDeviceToHost));
+  CUDA_ERROR_FATAL_RUNTIME(cudaMemcpy(b, b_cuda, Size * sizeof(float),
+                                      cudaMemcpyDeviceToHost));
+
 #ifdef BREAKDOWNS
   e_b3 = std::chrono::high_resolution_clock::now();
+  s_b4 = std::chrono::high_resolution_clock::now();
 #endif
 
   cudaFree(m_cuda);
   cudaFree(a_cuda);
   cudaFree(b_cuda);
+
+#ifdef BREAKDOWNS
+  e_b4 = std::chrono::high_resolution_clock::now();
+#endif
+
 }
 
 /*------------------------------------------------------
@@ -503,7 +538,7 @@ void InitMat(float *ary, int nrow, int ncol) {
 
   for (i = 0; i < nrow; i++) {
     for (j = 0; j < ncol; j++) {
-      fscanf(fp, "%f", ary + Size * i + j);
+      FSCANF_CHECK(fp, "%f", ary + Size * i + j);
     }
   }
 }
@@ -533,7 +568,7 @@ void InitAry(float *ary, int ary_size) {
   int i;
 
   for (i = 0; i < ary_size; i++) {
-    fscanf(fp, "%f", &ary[i]);
+    FSCANF_CHECK(fp, "%f", &ary[i]);
   }
 }
 

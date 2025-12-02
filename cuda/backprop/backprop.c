@@ -11,6 +11,7 @@
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include "../../common/util.h"
 
 // #define OPEN
 
@@ -390,9 +391,9 @@ BPNN *bpnn_read(char *filename) {
     abort();
   }
   printf("Reading '%s'\n", filename); // fflush(stdout);
-  fread(&n1, sizeof(int), 1, file);
-  fread(&n2, sizeof(int), 1, file);
-  fread(&n3, sizeof(int), 1, file);
+  FREAD_CHECK(&n1, sizeof(int), 1, file);
+  FREAD_CHECK(&n2, sizeof(int), 1, file);
+  FREAD_CHECK(&n3, sizeof(int), 1, file);
 
   new = bpnn_internal_create(n1, n2, n3);
   if (!new) {
@@ -406,7 +407,7 @@ BPNN *bpnn_read(char *filename) {
 
   memcnt = 0;
   mem = (char *)malloc((unsigned)((n1 + 1) * (n2 + 1) * sizeof(float)));
-  fread(&mem, (n1 + 1) * (n2 + 1) * sizeof(float), 1, file);
+  FREAD_CHECK(&mem, (size_t)(n1 + 1) * (size_t)(n2 + 1) * sizeof(float), 1, file);
 
   for (i = 0; i <= n1; i++) {
     for (j = 0; j <= n2; j++) {
@@ -421,7 +422,7 @@ BPNN *bpnn_read(char *filename) {
   memcnt = 0;
   mem = (char *)malloc((unsigned)((n2 + 1) * (n3 + 1) * sizeof(float)));
 
-  fread(&mem, (n2 + 1) * (n3 + 1) * sizeof(float), 1, file);
+  FREAD_CHECK(&mem, (size_t)(n2 + 1) * (size_t)(n3 + 1) * sizeof(float), 1, file);
   for (i = 0; i <= n2; i++) {
     for (j = 0; j <= n3; j++) {
       fastcopy(&(new->hidden_weights[i][j]), &mem[memcnt], sizeof(float));

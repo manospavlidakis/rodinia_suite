@@ -59,6 +59,20 @@ inline void EXIT_DELAY(int return_code)
 #define EXIT_WAIVED 2
 #endif
 
+#ifdef DISABLE_HIP_CHECK
+#define HIP_CHECK(call) (void)(call)
+#else
+#define HIP_CHECK(call)                                                      \
+  do {                                                                       \
+    hipError_t _e = (call);                                                  \
+    if (_e != hipSuccess) {                                                  \
+      std::fprintf(stderr, "HIP ERROR %s:%d: %s failed: %s\n",               \
+                   __FILE__, __LINE__, #call, hipGetErrorString(_e));        \
+      std::abort();                                                          \
+    }                                                                        \
+  } while (0)
+#endif
+
 // Note, it is required that your SDK sample to include the proper header files,
 // please refer the CUDA examples for examples of the needed CUDA headers, which
 // may change depending on which CUDA functions are used.
@@ -416,7 +430,7 @@ static const char *_cudaGetErrorEnum(hipError_t error) {
 #define __DRIVER_TYPES_H__
 #ifdef __DRIVER_TYPES_H__
 #ifndef DEVICE_RESET
-#define DEVICE_RESET hipDeviceReset();
+#define DEVICE_RESET HIP_CHECK(hipDeviceReset());
 #endif
 #else
 #ifndef DEVICE_RESET

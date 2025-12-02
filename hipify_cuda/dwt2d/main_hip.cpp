@@ -41,6 +41,7 @@
 #include <string.h>
 #include <sys/time.h>
 #include <unistd.h>
+#include <cstring>
 #define WARMUP
 std::chrono::high_resolution_clock::time_point s_compute;
 std::chrono::high_resolution_clock::time_point e_compute;

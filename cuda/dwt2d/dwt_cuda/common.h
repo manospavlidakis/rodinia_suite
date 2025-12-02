@@ -1,4 +1,4 @@
-///  
+///
 /// @file    common.h
 /// @author  Martin Jirman (207962@mail.muni.cz)
 /// @brief   Common stuff for all CUDA dwt functions.
@@ -6,16 +6,16 @@
 ///
 /// Copyright (c) 2011 Martin Jirman
 /// All rights reserved.
-/// 
+///
 /// Redistribution and use in source and binary forms, with or without
 /// modification, are permitted provided that the following conditions are met:
-/// 
+///
 ///     * Redistributions of source code must retain the above copyright
 ///       notice, this list of conditions and the following disclaimer.
 ///     * Redistributions in binary form must reproduce the above copyright
 ///       notice, this list of conditions and the following disclaimer in the
 ///       documentation and/or other materials provided with the distribution.
-/// 
+///
 /// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
 /// AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
 /// IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
@@ -67,15 +67,15 @@
 
 
 namespace dwt_cuda {
-  
-  
+
+
   /// Divide and round up.
   template <typename T>
   __device__ __host__ inline T divRndUp(const T & n, const T & d) {
     return (n / d) + ((n % d) ? 1 : 0);
   }
-  
-  
+
+
   // 9/7 forward DWT lifting schema coefficients
   const float f97Predict1 = -1.586134342;   ///< forward 9/7 predict 1
   const float f97Update1 = -0.05298011854;  ///< forward 9/7 update 1
@@ -88,22 +88,22 @@ namespace dwt_cuda {
   const float r97predict2 = -f97Predict2;  ///< undo 9/7 predict 2
   const float r97update1 = -f97Update1;    ///< undo 9/7 update 1
   const float r97Predict1 = -f97Predict1;  ///< undo 9/7 predict 1
-  
+
   // FDWT 9/7 scaling coefficients
   const float scale97Mul = 1.23017410491400f;
   const float scale97Div = 1.0 / scale97Mul;
-  
-  
+
+
   // 5/3 forward DWT lifting schema coefficients
   const float forward53Predict = -0.5f;   /// forward 5/3 predict
   const float forward53Update = 0.25f;    /// forward 5/3 update
-  
+
   // 5/3 forward DWT lifting schema coefficients
   const float reverse53Update = -forward53Update;    /// undo 5/3 update
   const float reverse53Predict = -forward53Predict;  /// undo 5/3 predict
-  
-  
-  
+
+
+
   /// Functor which adds scaled sum of neighbors to given central pixel.
   struct AddScaledSum {
     const float scale;  // scale of neighbors
@@ -112,9 +112,9 @@ namespace dwt_cuda {
       c += scale * (p + n);
     }
   };
-  
-  
-  
+
+
+
   /// Returns index ranging from 0 to num threads, such that first half
   /// of threads get even indices and others get odd indices. Each thread
   /// gets different index.
@@ -126,18 +126,18 @@ namespace dwt_cuda {
   __device__ inline int parityIdx() {
     return (threadIdx.x * 2) - (THREADS - 1) * (threadIdx.x / (THREADS / 2));
   }
-  
-          
-  
+
+
+
   /// size of shared memory
   #if defined(__CUDA_ARCH__) && (__CUDA_ARCH__ >= 200)
   const int SHM_SIZE = 48 * 1024;
   #else
   const int SHM_SIZE = 16 * 1024;
   #endif
-  
-  
-  
+
+
+
   /// Perrformance and return code tester.
   class CudaDWTTester {
   private:
@@ -168,20 +168,20 @@ namespace dwt_cuda {
     /// @return true if there was no error, false otherwise
     static bool checkLastKernelCall(const char * message) {
       #if defined(GPU_DWT_TESTING)
-      return testRunning ? true : check(cudaThreadSynchronize(), message);
+      return testRunning ? true : check(cudaDeviceSynchronize(), message);
       #else // GPU_DWT_TESTING
       return true;
       #endif // GPU_DWT_TESTING
     }
-    
+
     /// Initializes DWT tester for time measurement
     CudaDWTTester() : disabled(testRunning) {}
-    
+
     /// Gets rpefered number of iterations
     int getNumIterations() {
       return disabled ? 1 : 31;
     }
-    
+
     /// Starts one test iteration.
     void beginTestIteration() {
       if(!disabled) {
@@ -191,7 +191,7 @@ namespace dwt_cuda {
         testRunning = true;
       }
     }
-    
+
     /// Ends on etest iteration.
     void endTestIteration() {
       if(!disabled) {
@@ -205,7 +205,7 @@ namespace dwt_cuda {
         times.push_back(time);
       }
     }
-    
+
     /// Shows brief info about all iterations.
     /// @param name   name of processing method
     /// @param sizeX  width of processed image
@@ -221,14 +221,14 @@ namespace dwt_cuda {
         const double median = (times[times.size() / 2]
                              + times[(times.size() - 1) / 2]) * 0.5f;
         printf("  %s:   %7.3f ms (mean)   %7.3f ms (median)   %7.3f ms (max)  "
-               "(%d x %d)\n", name, (sum / times.size()), median, 
+               "(%d x %d)\n", name, (sum / times.size()), median,
                times[times.size() - 1], sizeX, sizeY);
       }
     }
   };
-  
-  
-  
+
+
+
   /// Simple cudaMemcpy wrapped in performance tester.
   /// @param dest  destination bufer
   /// @param src   source buffer
@@ -243,12 +243,11 @@ namespace dwt_cuda {
     PERF_END("        memcpy", sx, sy)
     CudaDWTTester::check(status, "memcpy device > device");
   }
-  
-  
-  
+
+
+
 } // end of namespace dwt_cuda
 
 
 
 #endif	// DWT_COMMON_CUDA_H
-
