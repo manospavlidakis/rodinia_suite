@@ -260,6 +260,7 @@ int main(int argc, char *argv[]) {
       end_warmup - start_warmup;
   std::cerr << "Warmup time: " << elapsed_milli_warmup.count() << " ms"
             << std::endl;
+  cudaStreamDestroy(stream);
 #endif
 }
 /*------------------------------------------------------

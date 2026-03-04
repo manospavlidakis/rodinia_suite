@@ -76,7 +76,7 @@ extern "C" void bpnn_train_cuda(BPNN *net, float *eo, float *eh) {
   float *input_weights_prev_one_dim;
   num_blocks = (in + 1023) / 1024;
   dim3 grid(1, num_blocks);
-  dim3 threads(32, 32);  // MP: need to verify!!
+  dim3 threads(16, 16);
 
   input_weights_one_dim = (float *)malloc((in + 1) * (hid + 1) * sizeof(float));
   input_weights_prev_one_dim =
@@ -224,6 +224,7 @@ extern "C" void bpnn_train_cuda(BPNN *net, float *eo, float *eh) {
 #ifdef WARMUP
   std::chrono::duration<double, std::milli> elapsed_milli_warmup = end_warmup - start_warmup;
   std::cerr << "Warmup time: " << elapsed_milli_warmup.count() << " ms" << std::endl;
+  cudaStreamDestroy(stream);
 #endif
 
   std::chrono::duration<double, std::milli> compute_milli = e_compute - s_compute;

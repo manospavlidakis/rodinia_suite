@@ -219,8 +219,13 @@ int main(int argc, char *argv[]) {
 
   auto end = std::chrono::high_resolution_clock::now();
   std::chrono::duration<double, std::milli> elapsed_milli_0 = end_0 - start_0;
-  std::cerr << "Init time: " << elapsed_milli_0.count() << " ms" << std::endl;
-
+  //std::cerr << "Init time: " << elapsed_milli_0.count() << " ms" << std::endl;
+#ifdef WARMUP
+  std::chrono::duration<double, std::milli> elapsed_milli_warmup =
+      end_warmup - start_warmup;
+  std::cerr << "Warmup time: " << elapsed_milli_warmup.count() << " ms"
+            << std::endl;
+#endif
   std::chrono::duration<double, std::milli> compute_milli =
       e_compute - s_compute;
   std::cerr << "Computation: " << compute_milli.count() << " ms" << std::endl;
@@ -228,11 +233,5 @@ int main(int argc, char *argv[]) {
   std::chrono::duration<double, std::milli> elapsed_milli = end - start;
   std::cerr << "Elapsed time: " << elapsed_milli.count() << " ms" << std::endl;
 
-#ifdef WARMUP
-  std::chrono::duration<double, std::milli> elapsed_milli_warmup =
-      end_warmup - start_warmup;
-  std::cerr << "Warmup time: " << elapsed_milli_warmup.count() << " ms"
-            << std::endl;
-#endif
   return 0.0;
 }

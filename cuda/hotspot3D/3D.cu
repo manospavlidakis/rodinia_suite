@@ -216,7 +216,7 @@ int main(int argc, char **argv) {
                  Ry, Rz, dt, iterations);
 
   float acc = accuracy(tempOut, answer, numRows * numCols * layers);
-  printf("Accuracy: %e\n", acc);
+  //printf("Accuracy: %e\n", acc);
   writeoutput(tempOut, numRows, numCols, layers, ofile);
 #endif
   free(tempIn);

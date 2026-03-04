@@ -23,7 +23,7 @@ class INode { public: const int f; virtual ~INode() {}
 
     protected:
         INode(int f) : f(f) {}
-}; 
+};
 
 class InternalNode : public INode
 {
@@ -92,5 +92,3 @@ void GenerateCodes(const INode* node, const HuffCode& prefix, HuffCodeMap& outCo
         GenerateCodes(in->right, rightPrefix, outCodes);
     }
 }
-
-

@@ -188,7 +188,7 @@ void processDWT(struct dwt *d, int forward, int writeVisual) {
     // if((ii+1) % (d->pixWidth) == 0) fprintf(stderr, "\n");
     // }
     // -------test----------
-
+    HIP_CHECK(hipDeviceSynchronize());
     e_compute = std::chrono::high_resolution_clock::now();
     std::chrono::duration<double, std::milli> compute_milli =
         e_compute - s_compute;
@@ -199,6 +199,7 @@ void processDWT(struct dwt *d, int forward, int writeVisual) {
         end_warmup - start_warmup;
     std::cerr << "Warmup time: " << elapsed_milli_warmup.count() << " ms"
               << std::endl;
+    HIP_CHECK(hipStreamDestroy(stream));
 #endif
     /* Store DWT to file */
 #ifdef OUTPUT

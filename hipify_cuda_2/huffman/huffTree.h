@@ -23,7 +23,7 @@ class INode { public: const int f; virtual ~INode() {}
 
     protected:
         INode(int f) : f(f) {}
-}; 
+};
 
 class InternalNode : public INode
 {
@@ -59,9 +59,9 @@ INode* BuildTree(unsigned int (&frequencies)[UniqueSymbols])
     for (int i = 0; i < UniqueSymbols; ++i)
     {
         if(frequencies[i] != 0){
-		std::cout << "frequencies[i]: " << frequencies[i] << std::endl;
+		    //std::cout << "frequencies[i]: " << frequencies[i] << std::endl;
             trees.push(new LeafNode(frequencies[i], (char)i));
-	}
+	    }
     }
     while (trees.size() > 1)
     {
@@ -94,5 +94,3 @@ void GenerateCodes(const INode* node, const HuffCode& prefix, HuffCodeMap& outCo
         GenerateCodes(in->right, rightPrefix, outCodes);
     }
 }
-
-

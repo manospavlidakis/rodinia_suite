@@ -3,7 +3,7 @@ set -u
 
 usage() {
   cat <<'EOF'
-Rodinia runner (CUDA)
+Rodinia runner (HIP)
 
 Usage:
   ./runRodiniaWithIntervals.sh [--help]
@@ -16,13 +16,9 @@ Environment variables:
   DO_BREAKDOWNS=0|1     0=skip breakdown aggregation (default), 1=aggregate breakdown CSVs
   RUNS=<N>              Number of iterations (default: 5)
   SLEEP_SECS=<secs>     Sleep between iterations (default: 0; only used when RERUN_APPS=1)
+  GPU_ID=<id>           Sets HIP_VISIBLE_DEVICES=<id>
   OUT_DIR=<dir>         Output dir name (default: results)
-  LABEL=<str>           Optional label added to output filenames (e.g., cuda/scale)
-
-GPU selection:
-  NVIDIA_GPU_ID=<id>    Sets CUDA_VISIBLE_DEVICES=<id>   (preferred for CUDA runner)
-  GPU_ID=<id>           Back-compat alias for CUDA_VISIBLE_DEVICES=<id>
-  AMD_GPU_ID=<id>       Ignored by CUDA runner (use the HIP runner instead)
+  LABEL=<str>           Optional label added to output filenames (e.g., hip/scale)
 
 Examples:
   # Default: parse existing average.csv only (no reruns)
@@ -32,9 +28,9 @@ Examples:
   DO_BREAKDOWNS=1 ./runRodiniaWithIntervals.sh
 
   # Re-run all benchmarks 5 times, sleep 10 minutes between iterations, GPU 0, plus breakdowns
-  LABEL=cuda NVIDIA_GPU_ID=0 RUNS=5 SLEEP_SECS=600 RERUN_APPS=1 DO_BREAKDOWNS=1 ./runRodiniaWithIntervals.sh
+  LABEL=hip GPU_ID=0 RUNS=5 SLEEP_SECS=600 RERUN_APPS=1 DO_BREAKDOWNS=1 ./runRodiniaWithIntervals.sh
 
-  # Back-compat GPU selector
+  # Select GPU 1
   GPU_ID=1 ./runRodiniaWithIntervals.sh
 EOF
 }
@@ -60,31 +56,16 @@ SLEEP_SECS=${SLEEP_SECS:-0}
 OUT_DIR=${OUT_DIR:-results}
 OUT_DIR="${ROOT_DIR}/${OUT_DIR}"
 LABEL=${LABEL:-}
-
-# Back-compat GPU selector
 GPU_ID=${GPU_ID:-}
-
-# New per-vendor selectors
-NVIDIA_GPU_ID=${NVIDIA_GPU_ID:-}
-AMD_GPU_ID=${AMD_GPU_ID:-}
 
 RERUN_APPS=${RERUN_APPS:-0}         # 0=reuse (default), 1=rerun ./run.sh
 DO_BREAKDOWNS=${DO_BREAKDOWNS:-0}   # 0=skip breakdown aggregation (default), 1=aggregate breakdowns
 
 mkdir -p "${OUT_DIR}"
 
-# Vendor-aware GPU selection
-# Precedence: NVIDIA_GPU_ID > GPU_ID
-if [[ -n "${AMD_GPU_ID}" ]]; then
-  echo "[ WARN              ] AMD_GPU_ID is set (${AMD_GPU_ID}) but this is the CUDA runner; ignoring." >&2
-fi
-
-if [[ -n "${NVIDIA_GPU_ID}" ]]; then
-  export CUDA_VISIBLE_DEVICES="${NVIDIA_GPU_ID}"
-  echo "[ GPU SELECTED       ] CUDA_VISIBLE_DEVICES=${CUDA_VISIBLE_DEVICES} (from NVIDIA_GPU_ID)"
-elif [[ -n "${GPU_ID}" ]]; then
-  export CUDA_VISIBLE_DEVICES="${GPU_ID}"
-  echo "[ GPU SELECTED       ] CUDA_VISIBLE_DEVICES=${CUDA_VISIBLE_DEVICES} (from GPU_ID)"
+if [[ -n "${GPU_ID}" ]]; then
+  export HIP_VISIBLE_DEVICES="${GPU_ID}"
+  echo "[ GPU SELECTED       ] HIP_VISIBLE_DEVICES=${HIP_VISIBLE_DEVICES}"
 fi
 
 timestamp="$(date +%Y%m%d_%H%M%S)"

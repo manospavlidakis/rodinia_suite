@@ -10,6 +10,8 @@ Usage:
 Options:
   --cuda <path>        Path to CUDA toolkit root (e.g., /usr/local/cuda, /opt/cuda-12.4)
   --sm <NN>            SM version (e.g., 86, 89, 90). Default: 86
+  --breakdowns         Enable BREAKDOWNS (-DBREAKDOWNS)
+  --no-breakdowns      Disable BREAKDOWNS (default)
   --spectral           Enable "spectral" mode (equivalent to SPECTRAL=true)
   --no-spectral        Disable spectral mode (default)
   --print-config       Print resolved configuration and exit
@@ -19,16 +21,20 @@ Environment variables (alternative to args):
   CUDA_DIR             CUDA toolkit root
   SM_VERSION           SM version
   SPECTRAL             true/false
+  BREAKDOWNS           true/false
 
 Examples:
-  # autodetect CUDA, default SM=86
+  # autodetect CUDA, default SM=86, no breakdowns
   ./buildall.sh
 
   # explicit CUDA + SM
   ./buildall.sh --cuda /usr/local/cuda-13.0 --sm 89
 
-  # spectral mode
-  ./buildall.sh --spectral --cuda /usr/local/cuda --sm 86
+  # enable breakdowns
+  ./buildall.sh --breakdowns
+
+  # spectral + breakdowns
+  ./buildall.sh --spectral --breakdowns --cuda /usr/local/cuda --sm 86
 
   # legacy positional
   ./buildall.sh /usr/local/cuda-12.9 86 true
@@ -53,6 +59,7 @@ print_progress() {
     printf "%0.s-" $(seq 1 $empty)
     printf "] %d%% (%d/%d)" "$percent" "$progress" "$total"
 }
+
 detect_cuda_dir() {
   if command -v nvcc >/dev/null 2>&1; then
     readlink -f "$(command -v nvcc)" | sed -E 's#/bin/nvcc$##'
@@ -69,6 +76,7 @@ detect_cuda_dir() {
 CUDA_DIR="${CUDA_DIR:-}"
 SM_VERSION="${SM_VERSION:-86}"
 SPECTRAL="${SPECTRAL:-false}"
+BREAKDOWNS="${BREAKDOWNS:-false}"
 PRINT_CONFIG="false"
 
 # Parse args (supports both options and legacy positional)
@@ -80,6 +88,8 @@ while [[ $# -gt 0 ]]; do
     --sm) SM_VERSION="${2:-}"; shift 2 ;;
     --spectral) SPECTRAL="true"; shift ;;
     --no-spectral) SPECTRAL="false"; shift ;;
+    --breakdowns) BREAKDOWNS="true"; shift ;;
+    --no-breakdowns) BREAKDOWNS="false"; shift ;;
     --print-config) PRINT_CONFIG="true"; shift ;;
     --) shift; positional+=("$@"); break ;;
     -*)
@@ -116,6 +126,7 @@ if [[ "${PRINT_CONFIG}" == "true" ]]; then
   echo "CUDA_LIB_DIR=${CUDA_LIB_DIR}"
   echo "SM_VERSION=${SM_VERSION}"
   echo "SPECTRAL=${SPECTRAL}"
+  echo "BREAKDOWNS=${BREAKDOWNS}"
   exit 0
 fi
 
@@ -123,6 +134,12 @@ if [[ "${SPECTRAL}" == "true" ]]; then
   echo "Run with Spectral"
 else
   echo "Run without Spectral"
+fi
+
+if [[ "${BREAKDOWNS}" == "true" ]]; then
+  echo "Breakdowns: ENABLED"
+else
+  echo "Breakdowns: DISABLED"
 fi
 
 echo "CUDA dir: ${CUDA_DIR}"
@@ -133,27 +150,28 @@ CXXFLAGS=" -m64 -O3"
 
 CXXFLAGS+=" -DOUTPUT"
 
-#enable it to breakdown the GPU time
-CXXFLAGS+=" -DBREAKDOWNS"
+# Enable/disable breakdowns via flag
+if [[ "${BREAKDOWNS}" == "true" ]]; then
+  CXXFLAGS+=" -DBREAKDOWNS"
+fi
 
-for mf in `find -name 'Makefile'`; do
+for mf in $(find -name 'Makefile'); do
     COUNT=$((COUNT + 1))
     dir=$(dirname "$mf")
     echo "$dir"
-    # Enter the directory
-    cd "$dir" || exit  # Exit if cd fails, for safety
+    cd "$dir" || exit
 
-    # Extract just the directory base name for comparison
     dir_name=$(basename "$dir")
 
-    # Check if the directory is one of the unsupported ones
-    if [ "$dir_name" = "kmeans" ] || [ "$dir_name" = "hybridsort" ]; then
+    if [[ "$dir_name" == "kmeans" || "$dir_name" == "hybridsort" ]]; then
         echo "Kmeans and hybridsort are not supported by SCALE due to texture issues."
     else
         make clean >/dev/null 2>&1
         make -s -j CUDA_DIR="$CUDA_DIR" GENCODE_FLAGS="$GENCODE_FLAGS" CXXFLAGS="$CXXFLAGS" CUDA_LIB_DIR="$CUDA_LIB_DIR"
     fi
+
     cd - > /dev/null
     print_progress "$COUNT" "$TOTAL"
 done
+
 echo -e "\nCompilation complete."

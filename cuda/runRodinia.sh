@@ -1,5 +1,5 @@
 #!/bin/bash
-benchmarks=("backprop" "bfs" "b+tree" "cfd" "dwt2d" "gaussian" "heartwall" "hotspot" "hotspot3D" "huffman" "lavaMD" "nn" "nw" "particlefilter" "pathfinder")
+benchmarks=("backprop" "bfs" "b+tree" "cfd" "dwt2d" "gaussian" "heartwall" "hotspot" "hotspot3D" "huffman" "lavaMD" "nn" "nw" "pathfinder")
 total_benchmarks=${#benchmarks[@]}
 echo "[===================]"
 for str in ${benchmarks[@]}

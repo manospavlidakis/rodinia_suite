@@ -21,7 +21,7 @@ std::chrono::high_resolution_clock::time_point s_compute;
 std::chrono::high_resolution_clock::time_point e_compute;
 std::chrono::high_resolution_clock::time_point start_warmup;
 std::chrono::high_resolution_clock::time_point end_warmup;
-// #define BREAKDOWNS
+
 #ifdef BREAKDOWNS
 std::chrono::high_resolution_clock::time_point s_b0;
 std::chrono::high_resolution_clock::time_point e_b0;
@@ -31,7 +31,8 @@ std::chrono::high_resolution_clock::time_point s_b2;
 std::chrono::high_resolution_clock::time_point e_b2;
 std::chrono::high_resolution_clock::time_point s_b3;
 std::chrono::high_resolution_clock::time_point e_b3;
-
+std::chrono::high_resolution_clock::time_point s_b4;
+std::chrono::high_resolution_clock::time_point e_b4;
 #endif
 
 #define STR_SIZE 256
@@ -232,10 +233,7 @@ __global__ void calculate_temp(int iteration,   // number of iteration
   }
 }
 
-/*
-   compute N time steps
- */
-
+/* compute N time steps */
 int compute_tran_temp(float *MatrixPower, float *MatrixTemp[2], int col,
                       int row, int total_iterations, int num_iterations,
                       int blockCols, int blockRows, int borderCols,
@@ -298,13 +296,14 @@ int main(int argc, char **argv) {
 void run(int argc, char **argv) {
   auto start = std::chrono::high_resolution_clock::now();
   auto start_0 = std::chrono::high_resolution_clock::now();
+
   int size;
   int grid_rows, grid_cols;
   float *FilesavingTemp, *FilesavingPower, *MatrixOut;
   char *tfile, *pfile, *ofile;
 
   int total_iterations = 60;
-  int pyramid_height = 1; // number of iterations
+  int pyramid_height = 1;
 
   if (argc != 7)
     usage(argc, argv);
@@ -319,7 +318,6 @@ void run(int argc, char **argv) {
 
   size = grid_rows * grid_cols;
 
-  /* --------------- pyramid parameters --------------- */
   int borderCols = (pyramid_height)*EXPAND_RATE / 2;
   int borderRows = (pyramid_height)*EXPAND_RATE / 2;
   int smallBlockCol = BLOCK_SIZE - (pyramid_height)*EXPAND_RATE;
@@ -338,10 +336,11 @@ void run(int argc, char **argv) {
 
   readinput(FilesavingTemp, grid_rows, grid_cols, tfile);
   readinput(FilesavingPower, grid_rows, grid_cols, pfile);
+
   auto end_0 = std::chrono::high_resolution_clock::now();
+
 #ifdef WARMUP
   start_warmup = std::chrono::high_resolution_clock::now();
-  // Warmup
   double *warm;
   HIP_CHECK(hipMalloc((void **)&warm, sizeof(double) * 100000));
   hipStream_t stream;
@@ -349,52 +348,75 @@ void run(int argc, char **argv) {
   HIP_CHECK(hipFree(warm));
   end_warmup = std::chrono::high_resolution_clock::now();
 #endif
+
   s_compute = std::chrono::high_resolution_clock::now();
+
   float *MatrixTemp[2], *MatrixPower;
+
 #ifdef BREAKDOWNS
   s_b0 = std::chrono::high_resolution_clock::now();
 #endif
-  HIP_CHECK(hipMalloc((void **)&MatrixTemp[0], sizeof(float) * size)); // FilesavingTemp
+  HIP_CHECK(hipMalloc((void **)&MatrixTemp[0], sizeof(float) * size));
   HIP_CHECK(hipMalloc((void **)&MatrixTemp[1], sizeof(float) * size));
-
-  HIP_CHECK(hipMalloc((void **)&MatrixPower, sizeof(float) * size)); // FilesavingPower
+  HIP_CHECK(hipMalloc((void **)&MatrixPower, sizeof(float) * size));
 #ifdef BREAKDOWNS
   HIP_CHECK(hipDeviceSynchronize());
   e_b0 = std::chrono::high_resolution_clock::now();
   s_b2 = std::chrono::high_resolution_clock::now();
 #endif
-  HIP_CHECK(hipMemcpy(MatrixTemp[0], FilesavingTemp, sizeof(float) * size,
-             hipMemcpyHostToDevice));
 
+  HIP_CHECK(hipMemcpy(MatrixTemp[0], FilesavingTemp, sizeof(float) * size,
+                      hipMemcpyHostToDevice));
   HIP_CHECK(hipMemcpy(MatrixPower, FilesavingPower, sizeof(float) * size,
-             hipMemcpyHostToDevice));
+                      hipMemcpyHostToDevice));
+
 #ifdef BREAKDOWNS
+  HIP_CHECK(hipDeviceSynchronize());
   e_b2 = std::chrono::high_resolution_clock::now();
   s_b1 = std::chrono::high_resolution_clock::now();
 #endif
+
   int ret = compute_tran_temp(MatrixPower, MatrixTemp, grid_cols, grid_rows,
                               total_iterations, pyramid_height, blockCols,
                               blockRows, borderCols, borderRows);
+
 #ifdef BREAKDOWNS
   HIP_CHECK(hipDeviceSynchronize());
   e_b1 = std::chrono::high_resolution_clock::now();
   s_b3 = std::chrono::high_resolution_clock::now();
 #endif
+
   HIP_CHECK(hipMemcpy(MatrixOut, MatrixTemp[ret], sizeof(float) * size,
-             hipMemcpyDeviceToHost));
+                      hipMemcpyDeviceToHost));
+
 #ifdef BREAKDOWNS
   e_b3 = std::chrono::high_resolution_clock::now();
+  s_b4 = std::chrono::high_resolution_clock::now();
 #endif
 
   HIP_CHECK(hipFree(MatrixPower));
   HIP_CHECK(hipFree(MatrixTemp[0]));
   HIP_CHECK(hipFree(MatrixTemp[1]));
 
+#ifdef BREAKDOWNS
+  HIP_CHECK(hipDeviceSynchronize());
+  e_b4 = std::chrono::high_resolution_clock::now();
+#endif
+
   e_compute = std::chrono::high_resolution_clock::now();
 
   auto end = std::chrono::high_resolution_clock::now();
+
   std::chrono::duration<double, std::milli> elapsed_milli_0 = end_0 - start_0;
-  std::cerr << "Init time: " << elapsed_milli_0.count() << " ms" << std::endl;
+  // std::cerr << "Init time: " << elapsed_milli_0.count() << " ms" << std::endl;
+
+#ifdef WARMUP
+  std::chrono::duration<double, std::milli> elapsed_milli_warmup =
+      end_warmup - start_warmup;
+  std::cerr << "Warmup time: " << elapsed_milli_warmup.count() << " ms"
+            << std::endl;
+  HIP_CHECK(hipStreamDestroy(stream));
+#endif
 
   std::chrono::duration<double, std::milli> compute_milli =
       e_compute - s_compute;
@@ -402,28 +424,25 @@ void run(int argc, char **argv) {
 
   std::chrono::duration<double, std::milli> elapsed_milli = end - start;
   std::cerr << "Elapsed time: " << elapsed_milli.count() << " ms" << std::endl;
-#ifdef WARMUP
-  std::chrono::duration<double, std::milli> elapsed_milli_warmup =
-      end_warmup - start_warmup;
-  std::cerr << "Warmup time: " << elapsed_milli_warmup.count() << " ms"
-            << std::endl;
-#endif
+
 #ifdef BREAKDOWNS
-  std::cerr << " ##### Breakdown Computation #####" << std::endl;
+  std::cerr << "##### Breakdown Computation #####" << std::endl;
   std::chrono::duration<double, std::milli> allocation = e_b0 - s_b0;
   std::cerr << "Allocation time: " << allocation.count() << " ms" << std::endl;
   std::chrono::duration<double, std::milli> transfer = e_b2 - s_b2;
-  std::cerr << "Transfer time: " << transfer.count() << " ms" << std::endl;
+  std::cerr << "H2D transfer time: " << transfer.count() << " ms" << std::endl;
   std::chrono::duration<double, std::milli> compute = e_b1 - s_b1;
   std::cerr << "Compute time: " << compute.count() << " ms" << std::endl;
   std::chrono::duration<double, std::milli> transfer2 = e_b3 - s_b3;
-  std::cerr << "Transfer Back time: " << transfer2.count() << " ms"
-            << std::endl;
-  std::cerr << " #################################" << std::endl;
+  std::cerr << "D2H transfer time: " << transfer2.count() << " ms" << std::endl;
+  std::chrono::duration<double, std::milli> freetime = e_b4 - s_b4;
+  std::cerr << "Free time: " << freetime.count() << " ms" << std::endl;
+  std::cerr << "#################################" << std::endl;
 #endif
 
 #ifdef OUTPUT
   writeoutput(MatrixOut, grid_rows, grid_cols, ofile);
 #endif
+
   free(MatrixOut);
 }

@@ -1,61 +1,81 @@
 #!/usr/bin/env python3
-import pandas as pd
 import glob
 import os
+import re
 import sys
-import numpy as np  # Import numpy for calculations
+import pandas as pd
+import numpy as np
 
-# Check if a benchmark argument is provided
 if len(sys.argv) != 2:
-    print("Usage: python script.py <benchmark>")
+    print("Usage: python find_avg_per_app_break.py <benchmark>")
     sys.exit(1)
 
-# Get the benchmark from the command-line argument
 benchmark = sys.argv[1]
-
-# Directory to save the result files
 output_dir = "."
 
-# File pattern to match any directory and filenames ending with _{benchmark}.csv
 file_pattern = f"**/*_{benchmark}.csv"
 csv_files = glob.glob(file_pattern, recursive=True)
 
-# Check if there are any files for this benchmark
+DEFAULT_METRICS = [
+    "Allocation time",
+    "H2D transfer time",
+    "Compute time",
+    "D2H transfer time",
+    "Free time",
+]
+
+out_path = os.path.join(output_dir, "average_breakdowns.csv")
+
+# If no breakdowns exist, emit a file with the expected metrics (blank values) and exit cleanly.
 if not csv_files:
-    print(f"No files found for benchmark '{benchmark}'. Exiting...")
-    sys.exit(1)
+    df = pd.DataFrame([{"Metric": m, "Average_ms": ""} for m in DEFAULT_METRICS])
+    df.to_csv(out_path, index=False)
+    print(f"No breakdown files for '{benchmark}'. Wrote empty template to {out_path}")
+    sys.exit(0)
 
-# Determine metrics of interest based on the benchmark
-if benchmark == "heartwall":
-    metrics_of_interest = ["Allocation-Transfer time", "Compute time", "Transfer back-Free time"]
-elif benchmark == "cfd":
-    metrics_of_interest = ["Compute_flux", "Memcpy2Symbol", "Alloc_Memcpy", "Init_Memset", "Compute", "Free"]
-else:
-    metrics_of_interest = ["Allocation time", "Transfer time", "Compute time", "Transfer Back time"]
+data = {m: [] for m in DEFAULT_METRICS}
 
-# Initialize a dictionary to collect values for each metric
-data = {metric: [] for metric in metrics_of_interest}
+# matches: "<metric>: <number> ms" where metric may include extra text (e.g., "(...)")
+line_re = re.compile(r"^\s*(?P<metric>[^:]+)\s*:\s*(?P<value>[-+0-9.eE]+)\s*ms\s*$")
 
-# Process each CSV file for the specified benchmark
+def canonical_metric(raw: str) -> str | None:
+    raw = raw.strip()
+
+    # Canonical (exact or with parenthetical suffix)
+    for canon in DEFAULT_METRICS:
+        if raw == canon:
+            return canon
+        if raw.startswith(canon + " ") or raw.startswith(canon + "("):
+            return canon
+
+    # Heartwall special labels
+    # "H2D transfer (memcpy+memcpy2sym)" -> "H2D transfer time"
+    if raw.startswith("H2D transfer") and not raw.startswith("H2D transfer time"):
+        return "H2D transfer time"
+
+    # If ever you get "D2H transfer (...)" etc, you can add similar mappings.
+    return None
+
 for file in csv_files:
-    with open(file, 'r') as f:
+    with open(file, "r", errors="ignore") as f:
         for line in f:
-            if ':' in line:
-                metric, value = line.split(':')
-                metric = metric.strip()
-                try:
-                    value = float(value.replace('ms', '').strip())  # Convert to float
-                    if metric in data:
-                        data[metric].append(value)
-                except ValueError:
-                    print(f"Warning: Skipping invalid value in file {file}: {line.strip()}")
+            m = line_re.match(line.strip())
+            if not m:
+                continue
+            raw_metric = m.group("metric").strip()
+            metric = canonical_metric(raw_metric)
+            if metric is None:
+                continue
+            try:
+                data[metric].append(float(m.group("value")))
+            except ValueError:
+                print(f"Warning: Skipping invalid value in {file}: {line.strip()}")
 
-# Compute only the average for selected metrics
-average_stats = {metric: np.mean(values) for metric, values in data.items() if values}
+rows = []
+for metric in DEFAULT_METRICS:
+    vals = data[metric]
+    avg = round(float(np.mean(vals)), 2) if vals else ""
+    rows.append({"Metric": metric, "Average_ms": avg})
 
-# Save the average results to "average_breakdowns.csv"
-output_file = os.path.join(output_dir, "average_breakdowns.csv")
-stats_df = pd.DataFrame(list(average_stats.items()), columns=["Metric", "Average"])
-stats_df.to_csv(output_file, index=False)
-
-print(f"Saved average values to {output_file}")
+pd.DataFrame(rows).to_csv(out_path, index=False)
+print(f"Saved average values to {out_path}")

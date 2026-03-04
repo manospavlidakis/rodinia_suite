@@ -53,7 +53,8 @@ std::chrono::high_resolution_clock::time_point s_b2;
 std::chrono::high_resolution_clock::time_point e_b2;
 std::chrono::high_resolution_clock::time_point s_b3;
 std::chrono::high_resolution_clock::time_point e_b3;
-
+std::chrono::high_resolution_clock::time_point s_b4;
+std::chrono::high_resolution_clock::time_point e_b4;
 #endif
 
 #ifdef RD_WG_SIZE_0_0
@@ -229,25 +230,25 @@ int main(int argc, char *argv[]) {
   free(finalVec);
   auto end = std::chrono::high_resolution_clock::now();
   std::chrono::duration<double, std::milli> elapsed_milli_0 = end_0 - start_0;
-  std::cerr << "Init time: " << elapsed_milli_0.count() << " ms" << std::endl;
+  //std::cerr << "Init time: " << elapsed_milli_0.count() << " ms" << std::endl;
 
   std::chrono::duration<double, std::milli> compute_milli =
       e_compute - s_compute;
   std::cerr << "Computation: " << compute_milli.count() << " ms" << std::endl;
 
 #ifdef BREAKDOWNS
-  std::cerr << " ##### Breakdown Computation #####" << std::endl;
+  std::cerr << "##### Breakdown Computation #####" << std::endl;
   std::chrono::duration<double, std::milli> allocation = e_b0 - s_b0;
   std::cerr << "Allocation time: " << allocation.count() << " ms" << std::endl;
   std::chrono::duration<double, std::milli> transfer = e_b2 - s_b2;
-  std::cerr << "Transfer time: " << transfer.count() << " ms" << std::endl;
+  std::cerr << "H2D transfer time: " << transfer.count() << " ms" << std::endl;
   std::chrono::duration<double, std::milli> compute = e_b1 - s_b1;
   std::cerr << "Compute time: " << compute.count() << " ms" << std::endl;
   std::chrono::duration<double, std::milli> transfer2 = e_b3 - s_b3;
-  std::cerr << "Transfer Back time: " << transfer2.count() << " ms"
-            << std::endl;
-
-  std::cerr << " #################################" << std::endl;
+  std::cerr << "D2H transfer time: " << transfer2.count() << " ms"<< std::endl;
+  std::chrono::duration<double, std::milli> freetime = e_b4 - s_b4;
+  std::cerr << "Free time: " << freetime.count() << " ms"<< std::endl;
+  std::cerr << "#################################" << std::endl;
 #endif
 
   std::chrono::duration<double, std::milli> elapsed_milli = end - start;
@@ -257,6 +258,7 @@ int main(int argc, char *argv[]) {
       end_warmup - start_warmup;
   std::cerr << "Warmup time: " << elapsed_milli_warmup.count() << " ms"
             << std::endl;
+  HIP_CHECK(hipStreamDestroy(stream));
 #endif
 }
 /*------------------------------------------------------
@@ -458,7 +460,6 @@ void ForwardSub() {
   }
   HIP_CHECK(hipDeviceSynchronize());
 #ifdef BREAKDOWNS
-  HIP_CHECK(hipDeviceSynchronize());
   e_b1 = std::chrono::high_resolution_clock::now();
   s_b3 = std::chrono::high_resolution_clock::now();
 #endif
@@ -469,13 +470,19 @@ void ForwardSub() {
   HIP_CHECK(hipMemcpy(a, a_cuda, Size * Size * sizeof(float),
                                       hipMemcpyDeviceToHost));
   HIP_CHECK(hipMemcpy(b, b_cuda, Size * sizeof(float), hipMemcpyDeviceToHost));
+
 #ifdef BREAKDOWNS
   e_b3 = std::chrono::high_resolution_clock::now();
+  s_b4 = std::chrono::high_resolution_clock::now();
 #endif
 
   HIP_CHECK(hipFree(m_cuda));
   HIP_CHECK(hipFree(a_cuda));
   HIP_CHECK(hipFree(b_cuda));
+
+#ifdef BREAKDOWNS
+  e_b4 = std::chrono::high_resolution_clock::now();
+#endif
 }
 
 /*------------------------------------------------------

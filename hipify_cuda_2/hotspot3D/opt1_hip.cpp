@@ -50,7 +50,15 @@ __global__ void hotspotOpt1(float *p, float* tIn, float *tOut, float sdc,
         + cn * tIn[N] + cb * temp1 + ct * temp3 + sdc * p[c] + ct * amb_temp;
     return;
 }
-
+#ifdef BREAKDOWNS
+extern "C" {
+double g_hotspot3d_alloc_ms = 0.0;
+double g_hotspot3d_h2d_ms = 0.0;
+double g_hotspot3d_compute_ms = 0.0;
+double g_hotspot3d_d2h_ms = 0.0;
+double g_hotspot3d_free_ms = 0.0;
+}
+#endif
 void hotspot_opt1(float *p, float *tIn, float *tOut,
         int nx, int ny, int nz,
         float Cap,
@@ -58,6 +66,18 @@ void hotspot_opt1(float *p, float *tIn, float *tOut,
         float dt, int numiter)
 {
     float ce, cw, cn, cs, ct, cb, cc;
+#ifdef BREAKDOWNS
+    auto s_alloc = std::chrono::high_resolution_clock::now();
+    auto e_alloc = s_alloc;
+    auto s_h2d = s_alloc;
+    auto e_h2d = s_alloc;
+    auto s_compute = s_alloc;
+    auto e_compute = s_alloc;
+    auto s_d2h = s_alloc;
+    auto e_d2h = s_alloc;
+    auto s_free = s_alloc;
+    auto e_free = s_alloc;
+#endif
     float stepDivCap = dt / Cap;
     ce = cw =stepDivCap/ Rx;
     cn = cs =stepDivCap/ Ry;
@@ -66,15 +86,26 @@ void hotspot_opt1(float *p, float *tIn, float *tOut,
     cc = 1.0 - (2.0*ce + 2.0*cn + 3.0*ct);
 
     size_t s = sizeof(float) * nx * ny * nz;
-    float  *tIn_d, *tOut_d, *p_d;
+    float *tIn_d, *tOut_d, *p_d;
+#ifdef BREAKDOWNS
+    s_alloc = std::chrono::high_resolution_clock::now();
+#endif
     HIP_CHECK(hipMalloc((void**)&p_d,s));
     HIP_CHECK(hipMalloc((void**)&tIn_d,s));
-    HIP_CHECK(hipMalloc((void**)&tOut_d,s));
+    HIP_CHECK(hipMalloc((void **)&tOut_d, s));
+#ifdef BREAKDOWNS
+    e_alloc = std::chrono::high_resolution_clock::now();
+    s_h2d = std::chrono::high_resolution_clock::now();
+#endif
     HIP_CHECK(hipMemcpy(tIn_d, tIn, s, hipMemcpyHostToDevice));
     HIP_CHECK(hipMemcpy(p_d, p, s, hipMemcpyHostToDevice));
-
+#ifdef BREAKDOWNS
+    e_h2d = std::chrono::high_resolution_clock::now();
+#endif
     HIP_CHECK(hipFuncSetCacheConfig(reinterpret_cast<const void*>(hotspotOpt1), hipFuncCachePreferL1));
-
+#ifdef BREAKDOWNS
+    s_compute = std::chrono::high_resolution_clock::now();
+#endif
     dim3 block_dim(64, 4, 1);
     dim3 grid_dim(nx / 64, ny / 4, 1);
     for (int i = 0; i < numiter; ++i) {
@@ -106,9 +137,26 @@ void hotspot_opt1(float *p, float *tIn, float *tOut,
           abort();
       }
 #endif
+    #ifdef BREAKDOWNS
+    HIP_CHECK(hipDeviceSynchronize());
+    e_compute = std::chrono::high_resolution_clock::now();
+    s_d2h = std::chrono::high_resolution_clock::now();
+#endif
     HIP_CHECK(hipMemcpy(tOut, tOut_d, s, hipMemcpyDeviceToHost));
+#ifdef BREAKDOWNS
+    e_d2h = std::chrono::high_resolution_clock::now();
+    s_free = std::chrono::high_resolution_clock::now();
+#endif
     HIP_CHECK(hipFree(p_d));
     HIP_CHECK(hipFree(tIn_d));
     HIP_CHECK(hipFree(tOut_d));
+#ifdef BREAKDOWNS
+    e_free = std::chrono::high_resolution_clock::now();
+    g_hotspot3d_alloc_ms = std::chrono::duration<double, std::milli>(e_alloc - s_alloc).count();
+    g_hotspot3d_h2d_ms = std::chrono::duration<double, std::milli>(e_h2d - s_h2d).count();
+    g_hotspot3d_compute_ms = std::chrono::duration<double, std::milli>(e_compute - s_compute).count();
+    g_hotspot3d_d2h_ms = std::chrono::duration<double, std::milli>(e_d2h - s_d2h).count();
+    g_hotspot3d_free_ms = std::chrono::duration<double, std::milli>(e_free - s_free).count();
+#endif
     return;
 }

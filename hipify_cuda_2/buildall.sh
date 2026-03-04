@@ -10,16 +10,21 @@ Usage:
 Options:
   --hip <path>         Path to HIP/ROCm root (e.g., /opt/rocm)
   --gfx <arch>         GPU arch (e.g., gfx90a, gfx1030, gfx1100). If omitted, auto-detect.
+  --breakdowns         Enable BREAKDOWNS (-DBREAKDOWNS)
+  --no-breakdowns      Disable BREAKDOWNS (default)
   --print-config       Print resolved configuration and exit
   -h, --help           Show this help
 
 Environment variables (alternative to args):
   HIP_DIR              ROCm root
   GFX_ARCH             gfx arch
+  BREAKDOWNS           true/false
 
 Examples:
   ./buildall_hip.sh
   ./buildall_hip.sh --hip /opt/rocm --gfx gfx1100
+  ./buildall_hip.sh --breakdowns
+  ./buildall_hip.sh --no-breakdowns --hip /opt/rocm --gfx gfx90a
   ./buildall_hip.sh /opt/rocm gfx1030
 EOF
 }
@@ -69,6 +74,7 @@ detect_gfx_arch() {
 # Defaults from env (if set)
 HIP_DIR="${HIP_DIR:-}"
 GFX_ARCH="${GFX_ARCH:-}"
+BREAKDOWNS="${BREAKDOWNS:-false}"
 PRINT_CONFIG="false"
 
 # Parse args (supports both options and legacy positional)
@@ -78,6 +84,8 @@ while [[ $# -gt 0 ]]; do
     -h|--help) usage; exit 0 ;;
     --hip) HIP_DIR="${2:-}"; shift 2 ;;
     --gfx) GFX_ARCH="${2:-}"; shift 2 ;;
+    --breakdowns) BREAKDOWNS="true"; shift ;;
+    --no-breakdowns) BREAKDOWNS="false"; shift ;;
     --print-config) PRINT_CONFIG="true"; shift ;;
     --) shift; positional+=("$@"); break ;;
     -*)
@@ -122,17 +130,27 @@ if [[ "${PRINT_CONFIG}" == "true" ]]; then
   echo "HIP_DIR=${HIP_DIR}"
   echo "HIP_LIB_DIR=${HIP_LIB_DIR}"
   echo "GFX_ARCH=${GFX_ARCH}"
+  echo "BREAKDOWNS=${BREAKDOWNS}"
   exit 0
 fi
 
 echo "ROCm/HIP dir: ${HIP_DIR}"
 echo "GFX arch: ${GFX_ARCH}"
+if [[ "${BREAKDOWNS}" == "true" ]]; then
+  echo "Breakdowns: ENABLED"
+else
+  echo "Breakdowns: DISABLED"
+fi
 
 AMDGPU_TARGETS="${GFX_ARCH}"
 CXXFLAGS=" -m64 -O3"
 CXXFLAGS+=" -DOUTPUT"
 CXXFLAGS+=" -DDISABLE_HIP_CHECK"
-CXXFLAGS+=" -DBREAKDOWNS"
+
+# Enable/disable breakdowns via flag
+if [[ "${BREAKDOWNS}" == "true" ]]; then
+  CXXFLAGS+=" -DBREAKDOWNS"
+fi
 
 for mf in $(find -name 'Makefile'); do
   COUNT=$((COUNT + 1))

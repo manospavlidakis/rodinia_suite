@@ -218,7 +218,7 @@ int main(int argc, char **argv) {
                  Ry, Rz, dt, iterations);
 
   float acc = accuracy(tempOut, answer, numRows * numCols * layers);
-  printf("Accuracy: %e\n", acc);
+  //printf("Accuracy: %e\n", acc);
   writeoutput(tempOut, numRows, numCols, layers, ofile);
 #endif
   free(tempIn);
@@ -226,20 +226,26 @@ int main(int argc, char **argv) {
   free(powerIn);
   auto end = std::chrono::high_resolution_clock::now();
   std::chrono::duration<double, std::milli> elapsed_milli_0 = end_0 - start_0;
-  std::cerr << "Init time: " << elapsed_milli_0.count() << " ms" << std::endl;
+  //std::cerr << "Init time: " << elapsed_milli_0.count() << " ms" << std::endl;
 
-  std::chrono::duration<double, std::milli> compute_milli =
-      e_compute - s_compute;
+  #ifdef WARMUP
+  std::chrono::duration<double, std::milli> elapsed_milli_warmup = end_warmup - start_warmup;
+  std::cerr << "Warmup time: " << elapsed_milli_warmup.count() << " ms" << std::endl;
+  HIP_CHECK(hipStreamDestroy(stream));
+#endif
+  std::chrono::duration<double, std::milli> compute_milli = e_compute - s_compute;
   std::cerr << "Computation: " << compute_milli.count() << " ms" << std::endl;
-
   std::chrono::duration<double, std::milli> elapsed_milli = end - start;
   std::cerr << "Elapsed time: " << elapsed_milli.count() << " ms" << std::endl;
 
-#ifdef WARMUP
-  std::chrono::duration<double, std::milli> elapsed_milli_warmup =
-      end_warmup - start_warmup;
-  std::cerr << "Warmup time: " << elapsed_milli_warmup.count() << " ms"
-            << std::endl;
+#ifdef BREAKDOWNS
+  std::cerr << "##### Breakdown Computation #####" << std::endl;
+  std::cerr << "Allocation time: " << g_hotspot3d_alloc_ms << " ms" << std::endl;
+  std::cerr << "H2D transfer time: " << g_hotspot3d_h2d_ms << " ms" << std::endl;
+  std::cerr << "Compute time: " << g_hotspot3d_compute_ms << " ms" << std::endl;
+  std::cerr << "D2H transfer time: " << g_hotspot3d_d2h_ms << " ms" << std::endl;
+  std::cerr << "Free time: " << g_hotspot3d_free_ms << " ms" << std::endl;
+  std::cerr << "#################################" << std::endl;
 #endif
   return 0;
 }

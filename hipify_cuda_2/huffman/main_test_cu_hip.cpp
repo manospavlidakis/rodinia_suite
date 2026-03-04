@@ -34,6 +34,14 @@ std::chrono::high_resolution_clock::time_point e_compute;
 std::chrono::high_resolution_clock::time_point start_warmup;
 std::chrono::high_resolution_clock::time_point end_warmup;
 
+#ifdef BREAKDOWNS
+double g_huffman_alloc_ms = 0.0;
+double g_huffman_h2d_ms = 0.0;
+double g_huffman_compute_ms = 0.0;
+double g_huffman_d2h_ms = 0.0;
+double g_huffman_free_ms = 0.0;
+#endif
+
 void runVLCTest(char *file_name, uint num_block_threads, uint num_blocks = 1);
 
 extern "C" void cpu_vlc_encode(unsigned int *indata, unsigned int num_elements,
@@ -73,18 +81,12 @@ void runVLCTest(char *file_name, uint num_block_threads, uint num_blocks) {
   HIP_CHECK(hipFree(warm));
   end_warmup = std::chrono::high_resolution_clock::now();
 #endif
-  unsigned int
-      num_elements;      // uint num_elements = num_blocks * num_block_threads;
+  unsigned int num_elements;      // uint num_elements = num_blocks * num_block_threads;
   unsigned int mem_size; // uint mem_size = num_elements * sizeof(int);
   unsigned int symbol_type_size = sizeof(int);
-  //////// LOAD DATA ///////////////
   double H; // entropy
-  initParams(file_name, num_block_threads, num_blocks, num_elements, mem_size,
-             symbol_type_size);
-  // printf("Parameters: num_elements: %d, num_blocks: %d, num_block_threads: "
-  //        "%d\n----------------------------\n",
-  //        num_elements, num_blocks, num_block_threads);
-  ////////LOAD DATA ///////////////
+  initParams(file_name, num_block_threads, num_blocks, num_elements, mem_size, symbol_type_size);
+
   uint *sourceData = (uint *)malloc(mem_size);
   uint *destData = (uint *)malloc(mem_size);
   uint *crefData = (uint *)malloc(mem_size);
@@ -107,16 +109,30 @@ void runVLCTest(char *file_name, uint num_block_threads, uint num_blocks) {
   memset(codewords, 0, NUM_SYMBOLS * symbol_type_size);
   memset(codewordlens, 0, NUM_SYMBOLS * symbol_type_size);
   memset(cindex2, 0, num_blocks * sizeof(int));
-  //////// LOAD DATA ///////////////
+
   loadData(file_name, sourceData, codewords, codewordlens, num_elements,
            mem_size, H);
-
-  //////// LOAD DATA ///////////////
 
   unsigned int *d_sourceData, *d_destData, *d_destDataPacked;
   unsigned int *d_codewords, *d_codewordlens;
   unsigned int *d_cw32, *d_cw32len, *d_cw32idx, *d_cindex, *d_cindex2;
+#ifdef BREAKDOWNS
+  auto s_alloc = std::chrono::high_resolution_clock::now();
+  auto e_alloc = s_alloc;
+  auto s_h2d = s_alloc;
+  auto e_h2d = s_alloc;
+  auto s_b_compute = s_alloc;
+  auto e_b_compute = s_alloc;
+  auto s_d2h = s_alloc;
+  auto e_d2h = s_alloc;
+  auto s_free = s_alloc;
+  auto e_free = s_alloc;
+
+  s_alloc = std::chrono::high_resolution_clock::now();
+#endif
+
   s_compute = std::chrono::high_resolution_clock::now();
+
   HIP_CHECK(hipMalloc((void **)&d_sourceData, mem_size));
   HIP_CHECK(hipMalloc((void **)&d_destData, mem_size));
   HIP_CHECK(hipMalloc((void **)&d_destDataPacked, mem_size));
@@ -131,6 +147,11 @@ void runVLCTest(char *file_name, uint num_block_threads, uint num_blocks) {
   HIP_CHECK(hipMalloc((void **)&d_cindex, num_blocks * sizeof(unsigned int)));
   HIP_CHECK(hipMalloc((void **)&d_cindex2, num_blocks * sizeof(unsigned int)));
 
+#ifdef BREAKDOWNS
+  e_alloc = std::chrono::high_resolution_clock::now();
+  s_h2d = std::chrono::high_resolution_clock::now();
+#endif
+
   HIP_CHECK(hipMemcpy(d_sourceData, sourceData, mem_size, hipMemcpyHostToDevice));
   HIP_CHECK(hipMemcpy(d_codewords, codewords,
                             NUM_SYMBOLS * symbol_type_size,
@@ -140,14 +161,15 @@ void runVLCTest(char *file_name, uint num_block_threads, uint num_blocks) {
                             hipMemcpyHostToDevice));
   HIP_CHECK(hipMemcpy(d_destData, destData, mem_size, hipMemcpyHostToDevice));
 
+#ifdef BREAKDOWNS
+  e_h2d = std::chrono::high_resolution_clock::now();
+#endif
+
   dim3 grid_size(num_blocks, 1, 1);
   dim3 block_size(num_block_threads, 1, 1);
   unsigned int sm_size;
 
   unsigned int NT = 100000; // number of runs for each execution time
-
-  unsigned int refbytesize;
-  unsigned int num_ints = refbytesize / 4 + ((refbytesize % 4 == 0) ? 0 : 1);
 
   //////////////////* SM64HUFF KERNEL *///////////////////////////////////
   grid_size.x = num_blocks;
@@ -156,6 +178,11 @@ void runVLCTest(char *file_name, uint num_block_threads, uint num_blocks) {
 #ifdef CACHECWLUT
   sm_size = 2 * NUM_SYMBOLS * sizeof(int) + block_size.x * sizeof(unsigned int);
 #endif
+
+#ifdef BREAKDOWNS
+  s_b_compute = std::chrono::high_resolution_clock::now();
+#endif
+
   for (int i = 0; i < NT; i++) {
     vlc_encode_kernel_sm64huff<<<grid_size, block_size, sm_size>>>(
         d_sourceData, d_codewords, d_codewordlens, d_cw32, d_cw32len, d_cw32idx,
@@ -163,46 +190,18 @@ void runVLCTest(char *file_name, uint num_block_threads, uint num_blocks) {
   }
   HIP_CHECK(hipDeviceSynchronize());
 
-  //////////////////* END KERNEL *///////////////////////////////////
-  e_compute = std::chrono::high_resolution_clock::now();
-  std::chrono::duration<double, std::milli> compute_milli =
-      e_compute - s_compute;
-  std::cerr << "Computation: " << compute_milli.count() << " ms" << std::endl;
-
-#ifdef WARMUP
-  std::chrono::duration<double, std::milli> elapsed_milli_warmup =
-      end_warmup - start_warmup;
-  std::cerr << "Warmup time: " << elapsed_milli_warmup.count() << " ms"
-            << std::endl;
+#ifdef BREAKDOWNS
+  e_b_compute = std::chrono::high_resolution_clock::now();
+  s_d2h = std::chrono::high_resolution_clock::now();
 #endif
 
-#ifdef OUTPUT
-  // Ensure the GPU data is copied back to host memory
   HIP_CHECK(hipMemcpy(destData, d_destData, mem_size, hipMemcpyDeviceToHost));
-  // Writing to a file
-  FILE *fpo = fopen("result.txt", "w");
-  if (fpo == NULL) {
-    fprintf(stderr, "Failed to open file for writing.\n");
-    exit(1); // Exit or handle the error appropriately
-  }
-  // Assuming destData is of type uint* and you want to print each element
-  int i;
-  for (i = 0; i < mem_size / sizeof(uint);
-       i++) { // adjust the loop according to data type size
-    fprintf(fpo, "%u\n",
-            destData[i]); // Modify the format specifier based on your data type
-  }
-  fclose(fpo);
 
+#ifdef BREAKDOWNS
+  e_d2h = std::chrono::high_resolution_clock::now();
+  s_free = std::chrono::high_resolution_clock::now();
 #endif
 
-  free(sourceData);
-  free(destData);
-  free(codewords);
-  free(codewordlens);
-  free(cw32);
-  free(cw32len);
-  free(crefData);
   HIP_CHECK(hipFree(d_sourceData));
   HIP_CHECK(hipFree(d_destData));
   HIP_CHECK(hipFree(d_destDataPacked));
@@ -213,5 +212,64 @@ void runVLCTest(char *file_name, uint num_block_threads, uint num_blocks) {
   HIP_CHECK(hipFree(d_cw32idx));
   HIP_CHECK(hipFree(d_cindex));
   HIP_CHECK(hipFree(d_cindex2));
+
+#ifdef BREAKDOWNS
+  e_free = std::chrono::high_resolution_clock::now();
+#endif
+
+  e_compute = std::chrono::high_resolution_clock::now();
+
+#ifdef WARMUP
+  std::chrono::duration<double, std::milli> elapsed_milli_warmup =
+      end_warmup - start_warmup;
+  std::cerr << "Warmup time: " << elapsed_milli_warmup.count() << " ms"
+            << std::endl;
+  HIP_CHECK(hipStreamDestroy(stream));
+#endif
+
+  std::chrono::duration<double, std::milli> compute_milli = e_compute - s_compute;
+  std::cerr << "Computation: " << compute_milli.count() << " ms" << std::endl;
+
+#ifdef OUTPUT
+  FILE *fpo = fopen("result.txt", "w");
+  if (fpo == NULL) {
+    fprintf(stderr, "Failed to open file for writing.\n");
+    exit(1);
+  }
+  for (int i = 0; i < (int)(mem_size / sizeof(uint)); i++) {
+    fprintf(fpo, "%u\n", destData[i]);
+  }
+  fclose(fpo);
+#endif
+
+  free(sourceData);
+  free(destData);
+  free(codewords);
+  free(codewordlens);
+  free(cw32);
+  free(cw32len);
+  free(crefData);
   free(cindex2);
+
+#ifdef BREAKDOWNS
+  g_huffman_alloc_ms =
+      std::chrono::duration<double, std::milli>(e_alloc - s_alloc).count();
+  g_huffman_h2d_ms =
+      std::chrono::duration<double, std::milli>(e_h2d - s_h2d).count();
+  g_huffman_compute_ms =
+      std::chrono::duration<double, std::milli>(e_b_compute - s_b_compute).count();
+  g_huffman_d2h_ms =
+      std::chrono::duration<double, std::milli>(e_d2h - s_d2h).count();
+  g_huffman_free_ms =
+      std::chrono::duration<double, std::milli>(e_free - s_free).count();
+
+  std::cerr << "##### Breakdown Computation #####" << std::endl;
+  std::cerr << "Allocation time: " << g_huffman_alloc_ms << " ms" << std::endl;
+  std::cerr << "H2D transfer time: " << g_huffman_h2d_ms << " ms" << std::endl;
+  std::cerr << "Compute time: " << g_huffman_compute_ms << " ms" << std::endl;
+  std::cerr << "D2H transfer time: " << g_huffman_d2h_ms << " ms"
+            << std::endl;
+  std::cerr << "Free time: " << g_huffman_free_ms << " ms" << std::endl;
+  std::cerr << "#################################" << std::endl;
+#endif
 }

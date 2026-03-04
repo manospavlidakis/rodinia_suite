@@ -12,6 +12,15 @@ static std::chrono::high_resolution_clock::time_point s_b2;
 static std::chrono::high_resolution_clock::time_point e_b2;
 static std::chrono::high_resolution_clock::time_point s_b3;
 static std::chrono::high_resolution_clock::time_point e_b3;
+static std::chrono::high_resolution_clock::time_point s_b4;
+static std::chrono::high_resolution_clock::time_point e_b4;
+extern "C" {
+double g_btree1_alloc_ms   = 0.0;
+double g_btree1_h2d_ms     = 0.0;
+double g_btree1_compute_ms = 0.0;
+double g_btree1_d2h_ms     = 0.0;
+double g_btree1_free_ms    = 0.0;
+}
 #endif
 
 #include <hip/hip_runtime.h>
@@ -89,7 +98,7 @@ void kernel_gpu_cuda_wrapper(record *records, long records_mem, knode *knodes,
   HIP_CHECK(hipMalloc((void **)&ansD, count * sizeof(record)));
 
 #ifdef BREAKDOWNS
-  cudaDeviceSynchronize();
+  HIP_CHECK(hipDeviceSynchronize());
   e_b0 = std::chrono::high_resolution_clock::now();
   s_b2 = std::chrono::high_resolution_clock::now();
 #endif
@@ -118,6 +127,7 @@ void kernel_gpu_cuda_wrapper(record *records, long records_mem, knode *knodes,
 
 #ifdef BREAKDOWNS
   e_b3 = std::chrono::high_resolution_clock::now();
+  s_b4 = std::chrono::high_resolution_clock::now();
 #endif
 
   HIP_CHECK(hipFree(recordsD));
@@ -128,17 +138,12 @@ void kernel_gpu_cuda_wrapper(record *records, long records_mem, knode *knodes,
   HIP_CHECK(hipFree(ansD));
 
 #ifdef BREAKDOWNS
-  std::cerr << " ##### Breakdown kernel wrapper 1 #####" << std::endl;
-  std::chrono::duration<double, std::milli> allocation = e_b0 - s_b0;
-  std::cerr << "Allocation time: " << allocation.count() << " ms" << std::endl;
-  std::chrono::duration<double, std::milli> transfer = e_b2 - s_b2;
-  std::cerr << "Transfer time: " << transfer.count() << " ms" << std::endl;
-  std::chrono::duration<double, std::milli> compute = e_b1 - s_b1;
-  std::cerr << "Compute time: " << compute.count() << " ms" << std::endl;
-  std::chrono::duration<double, std::milli> transfer2 = e_b3 - s_b3;
-  std::cerr << "Transfer Back time: " << transfer2.count() << " ms"
-            << std::endl;
-  std::cerr << " #################################" << std::endl;
+  e_b4 = std::chrono::high_resolution_clock::now();
+  g_btree1_alloc_ms   = std::chrono::duration<double, std::milli>(e_b0 - s_b0).count();
+  g_btree1_h2d_ms     = std::chrono::duration<double, std::milli>(e_b2 - s_b2).count();
+  g_btree1_compute_ms = std::chrono::duration<double, std::milli>(e_b1 - s_b1).count();
+  g_btree1_d2h_ms     = std::chrono::duration<double, std::milli>(e_b3 - s_b3).count();
+  g_btree1_free_ms    = std::chrono::duration<double, std::milli>(e_b4 - s_b4).count();
 #endif
 }
 

@@ -83,14 +83,9 @@ void runVLCTest(char *file_name, uint num_block_threads, uint num_blocks) {
       num_elements;      // uint num_elements = num_blocks * num_block_threads;
   unsigned int mem_size; // uint mem_size = num_elements * sizeof(int);
   unsigned int symbol_type_size = sizeof(int);
-  //////// LOAD DATA ///////////////
   double H; // entropy
   initParams(file_name, num_block_threads, num_blocks, num_elements, mem_size,
              symbol_type_size);
-  // printf("Parameters: num_elements: %d, num_blocks: %d, num_block_threads: "
-  //        "%d\n----------------------------\n",
-  //        num_elements, num_blocks, num_block_threads);
-  ////////LOAD DATA ///////////////
   uint *sourceData = (uint *)malloc(mem_size);
   uint *destData = (uint *)malloc(mem_size);
   uint *crefData = (uint *)malloc(mem_size);
@@ -113,11 +108,8 @@ void runVLCTest(char *file_name, uint num_block_threads, uint num_blocks) {
   memset(codewords, 0, NUM_SYMBOLS * symbol_type_size);
   memset(codewordlens, 0, NUM_SYMBOLS * symbol_type_size);
   memset(cindex2, 0, num_blocks * sizeof(int));
-  //////// LOAD DATA ///////////////
   loadData(file_name, sourceData, codewords, codewordlens, num_elements,
            mem_size, H);
-
-  //////// LOAD DATA ///////////////
 
   unsigned int *d_sourceData, *d_destData, *d_destDataPacked;
   unsigned int *d_codewords, *d_codewordlens;
@@ -165,17 +157,17 @@ void runVLCTest(char *file_name, uint num_block_threads, uint num_blocks) {
   CUDA_SAFE_CALL(cudaMemcpy(d_codewordlens, codewordlens,
                             NUM_SYMBOLS * symbol_type_size,
                             cudaMemcpyHostToDevice));
-  CUDA_SAFE_CALL(
-      cudaMemcpy(d_destData, destData, mem_size, cudaMemcpyHostToDevice));
+  CUDA_SAFE_CALL(cudaMemcpy(d_destData, destData, mem_size, cudaMemcpyHostToDevice));
+
 #ifdef BREAKDOWNS
   e_h2d = std::chrono::high_resolution_clock::now();
 #endif
+
   dim3 grid_size(num_blocks, 1, 1);
   dim3 block_size(num_block_threads, 1, 1);
   unsigned int sm_size;
 
   unsigned int NT = 100000; // number of runs for each execution time
-
 
   //////////////////* SM64HUFF KERNEL *///////////////////////////////////
   grid_size.x = num_blocks;
@@ -271,7 +263,7 @@ void runVLCTest(char *file_name, uint num_block_threads, uint num_blocks) {
   std::cerr << "H2D transfer time: " << g_huffman_h2d_ms << " ms" << std::endl;
   std::cerr << "Compute time: " << g_huffman_compute_ms << " ms"
             << std::endl;
-  std::cerr << "D2H transfer  Back time: " << g_huffman_d2h_ms << " ms"
+  std::cerr << "D2H transfer time: " << g_huffman_d2h_ms << " ms"
             << std::endl;
   std::cerr << "Free time: " << g_huffman_free_ms << " ms" << std::endl;
   std::cerr << "#################################" << std::endl;

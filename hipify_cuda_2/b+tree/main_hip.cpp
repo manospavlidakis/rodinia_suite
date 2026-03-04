@@ -20,6 +20,7 @@ std::chrono::high_resolution_clock::time_point s_compute2;
 std::chrono::high_resolution_clock::time_point e_compute2;
 std::chrono::high_resolution_clock::time_point start_warmup;
 std::chrono::high_resolution_clock::time_point end_warmup;
+
 #define WARMUP
 // general variables
 knode *knodes;
@@ -1588,7 +1589,7 @@ int main(int argc, char **argv) {
   rewind(commandFile);
 
   // allocate memory to contain the whole file:
-  commandBuffer = (char *)malloc(sizeof(char) * lSize);
+  commandBuffer = (char*)malloc(lSize + 1);
   if (commandBuffer == NULL) {
     fputs("Command Buffer memory error", stderr);
     exit(2);
@@ -1600,7 +1601,7 @@ int main(int argc, char **argv) {
     fputs("Command file reading error", stderr);
     exit(3);
   }
-
+  commandBuffer[lSize] = '\0';
   // terminate
   fclose(commandFile);
 
@@ -1946,24 +1947,30 @@ int main(int argc, char **argv) {
         break;
       }
     }
-    // printf("> ");
   }
-  // printf("\n");
+#ifdef WARMUP
+  std::chrono::duration<double, std::milli> elapsed_milli_warmup = end_warmup - start_warmup;
+  std::cerr << "Warmup time: " << elapsed_milli_warmup.count() << " ms"  << std::endl;
+  HIP_CHECK(hipStreamDestroy(stream));
+#endif
+
   auto end_all = std::chrono::high_resolution_clock::now();
-  std::chrono::duration<double, std::milli> compute_milli2 =
-      e_compute2 - s_compute2;
-  std::chrono::duration<double, std::milli> compute_milli =
-      e_compute - s_compute;
-  std::cerr << "Computation: " << compute_milli.count() + compute_milli2.count()
-            << " ms" << std::endl;
+  std::chrono::duration<double, std::milli> compute_milli2 = e_compute2 - s_compute2;
+  std::chrono::duration<double, std::milli> compute_milli =  e_compute - s_compute;
+  std::cerr << "Computation: " << compute_milli.count() + compute_milli2.count() << " ms" << std::endl;
   std::chrono::duration<double, std::milli> elapsed_milli = end_all - start_all;
   std::cerr << "Elapsed time: " << elapsed_milli.count() << " ms" << std::endl;
-#ifdef WARMUP
-  std::chrono::duration<double, std::milli> elapsed_milli_warmup =
-      end_warmup - start_warmup;
-  std::cerr << "Warmup time: " << elapsed_milli_warmup.count() << " ms"
-            << std::endl;
+
+#ifdef BREAKDOWNS
+  std::cerr << "##### Breakdown Computation #####" << std::endl;
+  std::cerr << "Allocation time: "   << g_btree2_alloc_ms + g_btree1_alloc_ms  << " ms" << std::endl;
+  std::cerr << "H2D transfer time: " << g_btree2_h2d_ms + g_btree1_h2d_ms     << " ms" << std::endl;
+  std::cerr << "Compute time: "      << g_btree2_compute_ms + g_btree1_compute_ms<< " ms" << std::endl;
+  std::cerr << "D2H transfer time: " << g_btree2_d2h_ms + g_btree1_d2h_ms     << " ms" << std::endl;
+  std::cerr << "Free time: "         << g_btree2_free_ms + g_btree1_free_ms   << " ms" << std::endl;
+  std::cerr << "#################################" << std::endl;
 #endif
+
   free(mem);
   return EXIT_SUCCESS;
 }

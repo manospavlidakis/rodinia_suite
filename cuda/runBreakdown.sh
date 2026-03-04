@@ -1,12 +1,8 @@
 #!/bin/bash
-benchmarks=("bfs" "gaussian" "hotspot" "lavaMD" "nn" "nw" "particlefilter" "pathfinder")
-#benchmarks=("nn" "pathfinder")
-total_benchmarks=${#benchmarks[@]}
-for str in ${benchmarks[@]}
-do
-    echo "[ RUN               ] $str"
-    cd ${str}
-    path=$(pwd)
-    ./../find_avg_per_app_break.py $str
-    cd - &>/dev/null
+benchmarks=("backprop" "bfs" "b+tree" "cfd" "dwt2d" "gaussian" "heartwall" "hotspot" "hotspot3D" "huffman" "lavaMD" "nn" "nw" "pathfinder")
+for b in "${benchmarks[@]}"; do
+  echo "[ RUN               ] $b"
+  cd "$b" || continue
+  ./../find_avg_per_app_break.py "$b" || true
+  cd - &>/dev/null
 done

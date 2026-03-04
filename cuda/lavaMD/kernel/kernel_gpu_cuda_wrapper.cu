@@ -90,7 +90,7 @@ void kernel_gpu_cuda_wrapper(par_str par_cpu, dim_str dim_cpu, box_str *box_cpu,
   std::chrono::duration<double, std::milli> compute = e_b1 - s_b1;
   std::cerr << "Compute time: " << compute.count() << " ms" << std::endl;
   std::chrono::duration<double, std::milli> transfer2 = e_b3 - s_b3;
-  std::cerr << "D2H transfer Back time: " << transfer2.count() << " ms"
+  std::cerr << "D2H transfer time: " << transfer2.count() << " ms"
             << std::endl;
   std::chrono::duration<double, std::milli> freetime = e_b4 - s_b4;
   std::cerr << "Free time: " << freetime.count() << " ms" << std::endl;

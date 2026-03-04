@@ -32,6 +32,8 @@ std::chrono::high_resolution_clock::time_point s_b6;
 std::chrono::high_resolution_clock::time_point e_b6;
 std::chrono::high_resolution_clock::time_point s_b7;
 std::chrono::high_resolution_clock::time_point e_b7;
+std::chrono::high_resolution_clock::time_point s_b8;
+std::chrono::high_resolution_clock::time_point e_b8;
 #endif
 
 #define WARMUP
@@ -73,7 +75,7 @@ extern "C" void bpnn_train_cuda(BPNN *net, float *eo, float *eh) {
   float sum;
   float *input_weights_one_dim;
   float *input_weights_prev_one_dim;
-  num_blocks = in / 1024;
+  num_blocks = (in + 1023) / 1024;
   dim3 grid(1, num_blocks);
   dim3 threads(16, 16);
 
@@ -199,6 +201,7 @@ extern "C" void bpnn_train_cuda(BPNN *net, float *eo, float *eh) {
 
 #ifdef BREAKDOWNS
   e_b7 = std::chrono::high_resolution_clock::now();
+  s_b8 = std::chrono::high_resolution_clock::now();
 #endif
 
   HIP_CHECK(hipFree(input_cuda));
@@ -207,6 +210,10 @@ extern "C" void bpnn_train_cuda(BPNN *net, float *eo, float *eh) {
   HIP_CHECK(hipFree(hidden_partial_sum));
   HIP_CHECK(hipFree(input_prev_weights_cuda));
   HIP_CHECK(hipFree(hidden_delta_cuda));
+#ifdef BREAKDOWNS
+  HIP_CHECK(hipDeviceSynchronize());
+  e_b8 = std::chrono::high_resolution_clock::now();
+#endif
   e_compute = std::chrono::high_resolution_clock::now();
   // Open a file for output
   std::ofstream outfile("result.txt");
@@ -218,32 +225,33 @@ extern "C" void bpnn_train_cuda(BPNN *net, float *eo, float *eh) {
     outfile << input_weights_one_dim[i] << std::endl;
   }
 
-  std::chrono::duration<double, std::milli> compute_milli =
-      e_compute - s_compute;
-  std::cerr << "Computation: " << compute_milli.count() << " ms" << std::endl;
-
 #ifdef WARMUP
-  std::chrono::duration<double, std::milli> elapsed_milli_warmup =
-      end_warmup - start_warmup;
+  std::chrono::duration<double, std::milli> elapsed_milli_warmup = end_warmup - start_warmup;
   std::cerr << "Warmup time: " << elapsed_milli_warmup.count() << " ms"
             << std::endl;
+  HIP_CHECK(hipStreamDestroy(stream));
 #endif
+
+  std::chrono::duration<double, std::milli> compute_milli = e_compute - s_compute;
+  std::cerr << "Computation: " << compute_milli.count() << " ms" << std::endl;
+
 #ifdef BREAKDOWNS
-  std::cerr << " ##### Breakdown kernel wrapper 1 #####" << std::endl;
+  std::cerr << "##### Breakdown Computation #####" << std::endl;
   std::chrono::duration<double, std::milli> allocation1 = e_b0 - s_b0;
   std::chrono::duration<double, std::milli> allocation2 = e_b4 - s_b4;
   std::cerr << "Allocation time: " << allocation1.count() + allocation2.count() << " ms" << std::endl;
   std::chrono::duration<double, std::milli> transfer1 = e_b2 - s_b2;
   std::chrono::duration<double, std::milli> transfer2 = e_b5 - s_b5;
-  std::cerr << "Transfer time: " << transfer1.count() + transfer2.count() << " ms" << std::endl;
+  std::cerr << "H2D transfer time: " << transfer1.count() + transfer2.count() << " ms" << std::endl;
   std::chrono::duration<double, std::milli> compute1 = e_b1 - s_b1;
   std::chrono::duration<double, std::milli> compute2 = e_b6 - s_b6;
   std::cerr << "Compute time: " << compute1.count() + compute2.count() << " ms" << std::endl;
   std::chrono::duration<double, std::milli> transferback1 = e_b3 - s_b3;
   std::chrono::duration<double, std::milli> transferback2 = e_b7 - s_b7;
-  std::cerr << "Transfer Back time: " << transferback1.count() + transferback2.count() << " ms"
-            << std::endl;
-  std::cerr << " #################################" << std::endl;
+  std::cerr << "D2H transfer time: " << transferback1.count() + transferback2.count() << " ms" << std::endl;
+  std::chrono::duration<double, std::milli> freedata = e_b8 - s_b8;
+  std::cerr << "Free time: " << freedata.count() << " ms" << std::endl;
+  std::cerr << "#################################" << std::endl;
 #endif
   free(partial_sum);
   free(input_weights_one_dim);

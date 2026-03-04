@@ -481,7 +481,7 @@ int main(int argc, char **argv) {
   int nel;
   int nelr;
   float *areas;
-  float *old_variables, *fluxes, *step_factors;
+  float *old_variables, *fluxes, *step_factors, *variables;
   int *elements_surrounding_elements;
   float *normals;
 
@@ -606,6 +606,7 @@ int main(int argc, char **argv) {
   old_variables = alloc<float>(nelr * NVAR);
   fluxes = alloc<float>(nelr * NVAR);
   step_factors = alloc<float>(nelr);
+  variables = alloc<float>(nelr * NVAR);
 #ifdef BREAKDOWNS
   cudaDeviceSynchronize();
   e_b1 = std::chrono::high_resolution_clock::now();
@@ -614,8 +615,6 @@ int main(int argc, char **argv) {
   upload<float>(areas, h_areas, nelr);
   upload<int>(elements_surrounding_elements, h_elements_surrounding_elements, nelr * NNB);
   upload<float>(normals, h_normals, nelr * NDIM * NNB);
-  // Create arrays and set initial conditions
-  float *variables = alloc<float>(nelr * NVAR);
   initialize_variables(nelr, variables);
   // make sure all memory is floatly allocated before we start timing
   initialize_variables(nelr, old_variables);
