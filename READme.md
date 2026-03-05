@@ -19,8 +19,9 @@ sycl/                # SYCL implementation (will be added soon)
 plot_*.py            # Plotting scripts
 run_plot_*.sh        # Plot automation scripts
 run_all.sh           # Builds and run everything
-hip                  # Deprecated (hand porting of cuda)
-hipify_cuda          # Old hipified version
+gpu_nvidia_clocks.sh # Prints and sets nvidia gpu clocks
+hip                  # Deprecated (hand porting from cuda)
+hipify_cuda          # Deprecated (Old hipified version)
 
 ```
 
@@ -66,19 +67,59 @@ ROCm:
 
 ---
 
-# Run Benchmarks
+# Run all benchmarks at once
 
-Run all Rodinia benchmarks once:
+Run all Rodinia benchmarks and produce plots:
+
+```bash
+./run_all.sh
+```
+What it does:
+  1) Build CUDA + HIP without breakdowns
+  2) Run CUDA + HIP (produces results/ inside each backend dir)
+  3) Plot computation bars (uses results inside cuda/ and hipify_cuda_2/)
+  4) Rebuild CUDA + HIP with breakdowns enabled
+  5) Re-run CUDA + HIP with breakdowns enabled
+  6) Plot breakdown stacked bars (uses results inside cuda/ and hipify_cuda_2/)
+
+### Options:
+
+Specify number of runs:
+
+```bash
+RUNS=5 ./run_all.sh
+```
+
+Add delay between runs:
+
+```bash
+RUNS=5 SLEEP_SECS=600 ./run_all.sh
+```
+
+Select GPUS:
+
+```bash
+NVIDIA_GPU_ID=0 AMD_GPU_ID=1 RUNS=5 SLEEP_SECS=600 ./run_all.sh
+```
+
+Print gpu ids:
+
+```bash
+./run_all.sh --list-gpus
+```
+
+---
+# Run each backend without intervals
+
+Each benchmark runs by default 30 times. Intervals add a latency between benchmarks to ensure consistent results.
 
 ```bash
 ./runRodinia.sh
 ```
 
----
+# Run with time intervals
 
-# Run Multiple Iterations
-
-Use the automated runner:
+In each backend (cuda, hipify_cuda etc) you will find:
 
 ```bash
 ./runRodiniaWithIntervals.sh
@@ -86,7 +127,13 @@ Use the automated runner:
 
 ### Options:
 
-Run benchmarks again:
+By default the script only create a summary of results that can be used for plotting:
+
+```bash
+./runRodiniaWithIntervals.sh
+```
+
+Run benchmarks:
 
 ```bash
 RERUN_APPS=1 ./runRodiniaWithIntervals.sh
@@ -95,19 +142,19 @@ RERUN_APPS=1 ./runRodiniaWithIntervals.sh
 Specify number of runs:
 
 ```bash
-RUNS=5 ./runRodiniaWithIntervals.sh
+RUNS=5 RERUN_APPS=1 ./runRodiniaWithIntervals.sh
 ```
 
 Add delay between runs:
 
 ```bash
-RUNS=5 SLEEP_SECS=600 ./runRodiniaWithIntervals.sh
+RUNS=5 RERUN_APPS=1 SLEEP_SECS=600 ./runRodiniaWithIntervals.sh
 ```
 
 Select GPU device:
 
 ```bash
-GPU_ID=0 ./runRodiniaWithIntervals.sh
+GPU_ID=0 RERUN_APPS=1 ./runRodiniaWithIntervals.sh
 ```
 
 ---
@@ -119,13 +166,13 @@ To enable detailed breakdown metrics (allocation, transfers, compute):
 1. Enable instrumentation and rebuild via `buildall.sh`:
 
 ```bash
-CXXFLAGS+=" -DBREAKDOWNS"
+./buildall.sh --breakdowns
 ```
 
 2. Run:
 
 ```bash
-DO_BREAKDOWNS=1 ./runRodiniaWithIntervals.sh
+DO_BREAKDOWNS=1 RERUN_APPS=1 ./runRodiniaWithIntervals.sh
 ```
 
 ---
@@ -134,7 +181,7 @@ DO_BREAKDOWNS=1 ./runRodiniaWithIntervals.sh
 
 ## Computation Time
 
-Generate a grouped bar chart comparing CUDA / HIP / SCALE / SYCL:
+Generate a grouped bar chart comparing CUDA / HIP / SYCL:
 
 ```bash
 ./run_plot_computation.sh
@@ -180,3 +227,35 @@ Results from other architectures (HIP, SCALE, SYCL) are validated by comparing t
 
 ```
 
+# GPU clock set
+
+Set gpu clocks to the appropriate values:
+
+```bash
+./gpu_nvidia_clocks.sh
+```
+
+### Options (NVIDIA)
+
+Show NVIDIA gpus:
+
+```bash
+./gpu_nvidia_clocks.sh --list-gpus
+```
+
+Print clock values:
+
+```bash
+./gpu_nvidia_clocks.sh -g 0 --get
+```
+
+Set the clock:
+
+```bash
+./gpu_nvidia_clocks.sh -g 0 --set --mem 10501 --gfx 3090
+```
+
+Reset:
+```bash
+./gpu_nvidia_clocks.sh -g 0 --reset
+```

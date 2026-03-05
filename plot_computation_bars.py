@@ -69,10 +69,10 @@ def main():
 
     # Same backend colors as breakdown plot
     backend_colors = {
-        "CUDA": "#1f77b4",   # blue
-        "HIP": "#ff7f0e",    # orange
-        "SCALE": "#2ca02c",  # green
-        "SYCL": "#d62728",   # red
+        "CUDA":"#76B900",   # green
+        "HIP": "#9C2A44",
+        "SCALE": "#2B1D4F",  # purple
+        "SYCL": "#F35A1C",   # red
     }
 
     dfs = {}
