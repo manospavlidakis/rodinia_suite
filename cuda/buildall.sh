@@ -41,8 +41,11 @@ Examples:
 EOF
 }
 
-# Count total Makefiles
-TOTAL=$(find -name 'Makefile' | wc -l)
+# Count total Makefiles only in cuda path
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# Count total Makefiles only under cuda/
+TOTAL=$(find "${SCRIPT_DIR}" -name 'Makefile' | wc -l)
 COUNT=0
 
 # Function to print progress bar
@@ -155,7 +158,7 @@ if [[ "${BREAKDOWNS}" == "true" ]]; then
   CXXFLAGS+=" -DBREAKDOWNS"
 fi
 
-for mf in $(find -name 'Makefile'); do
+for mf in $(find "${SCRIPT_DIR}" -name 'Makefile'); do
     COUNT=$((COUNT + 1))
     dir=$(dirname "$mf")
     echo "$dir"
