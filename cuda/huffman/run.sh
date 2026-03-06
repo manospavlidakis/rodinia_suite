@@ -2,11 +2,20 @@
 path=$1
 file=$2
 benchmark_name="${file%.csv}"
-#echo "Name: ${benchmark_name}"
-#echo "filename: "${file}
-#echo "path: "${path}
-for ((iter=1; iter<=30;iter++))
-do
-./${benchmark_name} ../../data/huffman/test1024_H2.206587175259.in &>1024_${iter}_${file}
-done
-../find_avg_per_app.py  ${benchmark_name}
+
+PROFILING=${PROFILING:-0}
+
+if [[ "$PROFILING" == "1" ]]; then
+    report="nsys_${benchmark_name}"
+    rm -f ${report}.sqlite 2> /dev/null
+    nsys profile --trace=cuda --cuda-event-trace=false --sample=none --output ${report} ./${benchmark_name} ../../data/huffman/test1024_H2.206587175259.in
+
+    nsys stats --report cuda_api_sum,cuda_gpu_kern_sum,cuda_gpu_mem_time_sum,cuda_gpu_mem_size_sum --format csv ${report}.nsys-rep > ${benchmark_name}_nsight.csv
+else
+    for ((iter=1; iter<=30; iter++))
+    do
+        ./${benchmark_name} ../../data/huffman/test1024_H2.206587175259.in &> 1024_${iter}_${file}
+    done
+
+    ../find_avg_per_app.py ${benchmark_name}
+fi
