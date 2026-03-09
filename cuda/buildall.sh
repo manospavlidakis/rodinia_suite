@@ -75,9 +75,10 @@ detect_cuda_dir() {
   return 1
 }
 
+# For native CUDA: export PATH=/usr/local/cuda/bin:$PATH
 # Defaults from env (if set)
 CUDA_DIR="${CUDA_DIR:-}"
-SM_VERSION="${SM_VERSION:-86}"
+SM_VERSION="${SM_VERSION:-89}"
 SPECTRAL="${SPECTRAL:-false}"
 BREAKDOWNS="${BREAKDOWNS:-false}"
 PRINT_CONFIG="false"
@@ -123,7 +124,14 @@ else
   echo "ERROR: CUDA lib dir not found under ${CUDA_DIR}" >&2
   exit 1
 fi
-
+echo "========== DEBUG COMPILER =========="
+echo "PATH=$PATH"
+echo "NVCC=$(which nvcc)"
+echo "NVCC_PREPEND_FLAGS=${NVCC_PREPEND_FLAGS:-<unset>}"
+echo "CUDA_DIR=$CUDA_DIR"
+echo "CUDA_LIB_DIR=$CUDA_LIB_DIR"
+nvcc --version
+echo "===================================="
 if [[ "${PRINT_CONFIG}" == "true" ]]; then
   echo "CUDA_DIR=${CUDA_DIR}"
   echo "CUDA_LIB_DIR=${CUDA_LIB_DIR}"
