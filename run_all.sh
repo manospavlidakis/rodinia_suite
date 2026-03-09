@@ -120,20 +120,20 @@ echo "[===================]"
 # 1) Build without breakdowns
 ################################################################################
 echo "[ STEP 1 ] Build CUDA (no breakdowns)"
-#run_in_dir "${CUDA_DIR}" ./buildall.sh --no-breakdowns
+run_in_dir "${CUDA_DIR}" ./buildall.sh --no-breakdowns
 
 echo "[ STEP 1 ] Build HIP (no breakdowns)"
-#run_in_dir "${HIP_DIR}" ./buildall.sh --no-breakdowns
+run_in_dir "${HIP_DIR}" ./buildall.sh --no-breakdowns
 
 ################################################################################
 # 2) Run without breakdowns
 ################################################################################
 echo "[ STEP 2 ] Run CUDA (no breakdowns)"
-#run_in_dir "${CUDA_DIR}" env \
-#  RERUN_APPS=1 DO_BREAKDOWNS=0 LABEL=cuda OUT_DIR="${OUT_DIR}" \
-#  RUNS="${RUNS}" SLEEP_SECS="${SLEEP_SECS}" \
-#  GPU_ID="${NVIDIA_GPU_ID}" \
-#  ./runRodiniaWithIntervals.sh
+run_in_dir "${CUDA_DIR}" env \
+  RERUN_APPS=1 DO_BREAKDOWNS=0 LABEL=cuda OUT_DIR="${OUT_DIR}" \
+  RUNS="${RUNS}" SLEEP_SECS="${SLEEP_SECS}" \
+  GPU_ID="${NVIDIA_GPU_ID}" \
+  ./runRodiniaWithIntervals.sh
 
 echo "[ STEP 2 ] Run HIP (no breakdowns)"
 run_in_dir "${HIP_DIR}" env \

@@ -7,10 +7,10 @@ ifeq ($(d),debug)
 endif
 
 # Compilers
-CC         := $(COMPILER_PATH)/gcc
-CXX        := $(COMPILER_PATH)/g++
-LINK       := $(COMPILER_PATH)/g++ -fPIC
-NVCC       := $(CUDA_DIR)/bin/nvcc
+CC   := $(COMPILER_PATH)/gcc
+CXX  := $(COMPILER_PATH)/g++
+LINK := $(COMPILER_PATH)/g++ -fPIC
+NVCC ?= nvcc
 
 all : nn hurricane_gen
 

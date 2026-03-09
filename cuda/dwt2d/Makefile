@@ -11,7 +11,7 @@ EXECUTABLE := dwt2d
 # Compilers
 CXX  := g++
 CC   := gcc
-NVCC := $(CUDA_DIR)/bin/nvcc
+NVCC ?= nvcc
 
 # Files
 CFILES :=
@@ -32,22 +32,16 @@ LIBDIRS :=
 ifneq ($(strip $(CUDA_LIB_DIR)),)
 LIBDIRS += -L$(CUDA_LIB_DIR)
 endif
-# Keep this for older layouts if CUDA_LIB_DIR wasn’t provided
 LIBDIRS += -L$(CUDA_DIR)/lib64
 
 # -----------------------------
 # Flags
 # -----------------------------
-# Host flags (CXXFLAGS comes from buildall.sh; we extend it)
 HOST_CXXFLAGS := $(CXXFLAGS) $(INCLUDES) $(LIBDIRS)
 HOST_CFLAGS   := $(INCLUDES) $(LIBDIRS) -std=c99
 
-# NVCC flags: do NOT blindly append $(CXXFLAGS) (may contain -W, etc.)
-# Only forward safe/common parts + let build script control GENCODE_FLAGS.
 NVCCFLAGS := $(INCLUDES) $(LIBDIRS) -O3 --compiler-options -fno-strict-aliasing
 
-# OUTPUT macro: your script already adds -DOUTPUT into CXXFLAGS,
-# but .cu compilation should also see it even if someone builds locally.
 OUTPUT ?= -DOUTPUT
 
 LDFLAGS := $(LIBDIRS)

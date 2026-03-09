@@ -1,4 +1,4 @@
-CC := $(CUDA_DIR)/bin/nvcc
+CC ?= nvcc
 INCLUDE := $(CUDA_DIR)/include
 
 backprop: backprop.o facetrain.o imagenet.o backprop_cuda.o
