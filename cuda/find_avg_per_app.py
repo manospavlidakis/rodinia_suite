@@ -3,7 +3,7 @@ import pandas as pd
 import glob
 import os
 import sys
-import numpy as np  # Import numpy for standard deviation calculation
+import numpy as np
 
 # Check if a benchmark argument is provided
 if len(sys.argv) != 2:
@@ -15,7 +15,6 @@ benchmark = sys.argv[1]
 
 # Directory to save the result files
 output_dir = "."
-
 
 # File pattern to match any directory and filenames ending with _{benchmark}.csv
 file_pattern = f"**/*_{benchmark}.csv"
@@ -31,13 +30,13 @@ data = {"Init time": [], "Computation": [], "Elapsed time": [], "Warmup time": [
 
 # Process each CSV file for the specified benchmark
 for file in csv_files:
-    with open(file, 'r') as f:
+    with open(file, "r") as f:
         for line in f:
-            if ':' in line:
-                metric, value = line.split(':')
+            if ":" in line:
+                metric, value = line.split(":", 1)
                 metric = metric.strip()
                 try:
-                    value = float(value.replace('ms', '').strip())  # Convert to float
+                    value = float(value.replace("ms", "").strip())
                     if metric in data:
                         data[metric].append(value)
                 except ValueError:
@@ -70,8 +69,8 @@ stats_dict = {
 # Save each statistic to its respective CSV file
 for filename, stats in stats_dict.items():
     output_file = os.path.join(output_dir, filename)
-    stats_df = pd.DataFrame(list(stats.items()), columns=["Metric", filename.replace('.csv', '').capitalize()])
+    stats_df = pd.DataFrame(
+        list(stats.items()),
+        columns=["Metric", filename.replace(".csv", "").capitalize()]
+    )
     stats_df.to_csv(output_file, index=False)
-#    print(f"Saved {filename} in {output_dir}")
-
-#print("All statistics have been computed and saved separately.")
