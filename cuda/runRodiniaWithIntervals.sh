@@ -9,13 +9,14 @@ Usage:
   ./runRodiniaWithIntervals.sh [--help]
 
 This script is env-var driven (no positional args).
-By default it does NOT re-run benchmarks; it only parses existing per-app outputs (average.csv).
+By default it does NOT re-run benchmarks; it parses existing per-app statistics CSVs
+(average.csv, min.csv, max.csv, median.csv, iqr.csv, std_dev.csv).
 
 Environment variables:
   RERUN_APPS=0|1        0=reuse existing outputs (default), 1=run ./run.sh per app per iteration
   DO_BREAKDOWNS=0|1     0=skip breakdown aggregation (default), 1=aggregate breakdown CSVs
   RUNS=<N>              Number of iterations (default: 5)
-  SLEEP_SECS=<secs>     Sleep between iterations (default: 0; only used when RERUN_APPS=1)
+  SLEEP_SECS=<secs>     Sleep between iterations (default: 10; only used when RERUN_APPS=1)
   OUT_DIR=<dir>         Output dir name (default: results)
   LABEL=<str>           Optional label added to output filenames (e.g., cuda/scale)
 
@@ -36,6 +37,14 @@ Examples:
 
   # Back-compat GPU selector
   GPU_ID=1 ./runRodiniaWithIntervals.sh
+
+  # What we report:
+  - min = minimum of the 5 per-round mins
+  - max = maximum of the 5 per-round maxes
+  - avg = average of the 5 per-round averages
+  - median = average of the 5 per-round medians
+  - iqr = average of the 5 per-round IQRs
+  - std_dev = average of the 5 per-round std_devs
 EOF
 }
 
@@ -56,7 +65,7 @@ total_benchmarks=${#benchmarks[@]}
 
 # Config (override via env vars)
 RUNS=${RUNS:-5}
-SLEEP_SECS=${SLEEP_SECS:-0}
+SLEEP_SECS=${SLEEP_SECS:-10}
 OUT_DIR=${OUT_DIR:-results}
 OUT_DIR="${ROOT_DIR}/${OUT_DIR}"
 LABEL=${LABEL:-}
@@ -100,7 +109,7 @@ summary_csv="${base}_summary.csv"
 break_iter_csv="${base}_breakdowns_per_iteration.csv"
 break_summary_csv="${base}_breakdowns_summary.csv"
 
-echo "iteration,benchmark,avg_ms" > "${per_iter_csv}"
+echo "iteration,benchmark,avg_ms,min_ms,max_ms,median_ms,iqr_ms,std_dev_ms" > "${per_iter_csv}"
 if [[ "${DO_BREAKDOWNS}" == "1" ]]; then
   echo "iteration,benchmark,metric,avg_ms" > "${break_iter_csv}"
 fi
@@ -109,13 +118,32 @@ echo "[===================]"
 echo "[ MODE              ] RERUN_APPS=${RERUN_APPS} (0=reuse outputs, 1=run apps)"
 echo "[ BREAKDOWNS        ] DO_BREAKDOWNS=${DO_BREAKDOWNS} (0=skip, 1=aggregate)"
 
-extract_avg_ms() {
-  if [[ -f "average.csv" ]]; then
-    grep -m1 "Computation" "average.csv" | awk -F',' '{printf "%.2f", $2}'
+extract_metric_ms() {
+  local file="$1"
+  local metric="$2"
+
+  if [[ -f "${file}" ]]; then
+    awk -F',' -v metric="${metric}" '
+      NR > 1 {
+        gsub(/^[ \t]+|[ \t]+$/, "", $1)
+        gsub(/^[ \t]+|[ \t]+$/, "", $2)
+        if ($1 == metric && $2 != "") {
+          printf "%.2f", $2
+          exit
+        }
+      }
+    ' "${file}"
   else
     echo ""
   fi
 }
+
+extract_avg_ms()    { extract_metric_ms "average.csv"  "Computation"; }
+extract_min_ms()    { extract_metric_ms "min.csv"      "Computation"; }
+extract_max_ms()    { extract_metric_ms "max.csv"      "Computation"; }
+extract_median_ms() { extract_metric_ms "median.csv"   "Computation"; }
+extract_iqr_ms()    { extract_metric_ms "iqr.csv"      "Computation"; }
+extract_stddev_ms() { extract_metric_ms "std_dev.csv"  "Computation"; }
 
 extract_breakdowns() {
   if [[ -f "average_breakdowns.csv" ]]; then
@@ -141,15 +169,21 @@ for ((iter=1; iter<=RUNS; iter++)); do
       ./run.sh "${path}" "${b}.csv" || true
     fi
 
-    value="$(extract_avg_ms)"
-    if [[ -n "${value}" ]]; then
-      echo "[   AVG GPU time    ] $value ms"
-      echo "${iter},${b},${value}" >> "${per_iter_csv}"
-    else
-      echo "[   AVG GPU time    ] NA ms"
-      echo "${iter},${b}," >> "${per_iter_csv}"
-    fi
+    avg_val="$(extract_avg_ms)"
+    min_val="$(extract_min_ms)"
+    max_val="$(extract_max_ms)"
+    median_val="$(extract_median_ms)"
+    iqr_val="$(extract_iqr_ms)"
+    stddev_val="$(extract_stddev_ms)"
 
+    echo "[   AVG GPU time    ] ${avg_val:-NA} ms"
+    echo "[   MIN GPU time    ] ${min_val:-NA} ms"
+    echo "[   MAX GPU time    ] ${max_val:-NA} ms"
+    echo "[   MEDIAN GPU time ] ${median_val:-NA} ms"
+    echo "[   IQR GPU time    ] ${iqr_val:-NA} ms"
+    echo "[   STDDEV GPU time ] ${stddev_val:-NA} ms"
+
+    echo "${iter},${b},${avg_val},${min_val},${max_val},${median_val},${iqr_val},${stddev_val}" >> "${per_iter_csv}"  # CHANGED: store all stats per iteration
     if [[ "${DO_BREAKDOWNS}" == "1" ]]; then
       if [[ -x "${ROOT_DIR}/find_avg_per_app_break.py" ]]; then
         "${ROOT_DIR}/find_avg_per_app_break.py" "${b}" || true
@@ -174,21 +208,58 @@ done
 
 echo "[===================] $total_benchmarks apps processed."
 
-echo "benchmark,min_ms,max_ms,avg_ms,samples" > "${summary_csv}"
+echo "benchmark,min_ms,max_ms,avg_ms,median_ms,iqr_ms,std_dev_ms,samples" > "${summary_csv}"  # CHANGED: expanded summary CSV schema
 for b in "${benchmarks[@]}"; do
   awk -F',' -v bench="${b}" '
     NR==1 { next }
-    $2==bench && $3!="" {
-      v=$3+0.0
-      if (!seen) { min=v; max=v; seen=1 }
-      if (v<min) min=v
-      if (v>max) max=v
-      sum+=v
-      cnt+=1
+    $2==bench {
+      if ($3 != "") {
+        avg_v = $3 + 0.0
+        avg_sum += avg_v
+        avg_cnt += 1
+      }
+      if ($4 != "") {
+        min_v = $4 + 0.0
+        if (!min_seen || min_v < min_all) {
+          min_all = min_v
+          min_seen = 1
+        }
+      }
+      if ($5 != "") {
+        max_v = $5 + 0.0
+        if (!max_seen || max_v > max_all) {
+          max_all = max_v
+          max_seen = 1
+        }
+      }
+      if ($6 != "") {
+        median_v = $6 + 0.0
+        median_sum += median_v
+        median_cnt += 1
+      }
+      if ($7 != "") {
+        iqr_v = $7 + 0.0
+        iqr_sum += iqr_v
+        iqr_cnt += 1
+      }
+      if ($8 != "") {
+        std_v = $8 + 0.0
+        std_sum += std_v
+        std_cnt += 1
+      }
     }
     END {
-      if (cnt>0) printf "%s,%.2f,%.2f,%.2f,%d\n", bench, min, max, sum/cnt, cnt;
-      else       printf "%s,,,,0\n", bench;
+      printf "%s,", bench
+
+      if (min_seen)     printf "%.2f,", min_all; else printf ","
+      if (max_seen)     printf "%.2f,", max_all; else printf ","
+      if (avg_cnt>0)    printf "%.2f,", avg_sum/avg_cnt; else printf ","
+      if (median_cnt>0) printf "%.2f,", median_sum/median_cnt; else printf ","
+      if (iqr_cnt>0)    printf "%.2f,", iqr_sum/iqr_cnt; else printf ","
+      if (std_cnt>0)    printf "%.2f,", std_sum/std_cnt; else printf ","
+
+      samples = avg_cnt
+      printf "%d\n", samples
     }
   ' "${per_iter_csv}" >> "${summary_csv}"
 done

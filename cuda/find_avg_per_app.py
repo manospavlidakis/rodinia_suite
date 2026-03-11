@@ -15,7 +15,7 @@ benchmark = sys.argv[1]
 
 # Directory to save the result files
 output_dir = "."
-# os.makedirs(output_dir, exist_ok=True)
+
 
 # File pattern to match any directory and filenames ending with _{benchmark}.csv
 file_pattern = f"**/*_{benchmark}.csv"
@@ -45,10 +45,26 @@ for file in csv_files:
 
 # Compute statistics and save each to a separate CSV file
 stats_dict = {
-    "average.csv": {metric: np.mean(values) for metric, values in data.items() if values},
-    "min.csv": {metric: np.min(values) for metric, values in data.items() if values},
-    "max.csv": {metric: np.max(values) for metric, values in data.items() if values},
-    "std_dev.csv": {metric: np.std(values, ddof=1) for metric, values in data.items() if values},  # Sample std dev
+    "average.csv": {
+        metric: np.mean(values) for metric, values in data.items() if values
+    },
+    "min.csv": {
+        metric: np.min(values) for metric, values in data.items() if values
+    },
+    "max.csv": {
+        metric: np.max(values) for metric, values in data.items() if values
+    },
+    "median.csv": {
+        metric: np.median(values) for metric, values in data.items() if values
+    },
+    "iqr.csv": {
+        metric: np.percentile(values, 75) - np.percentile(values, 25)
+        for metric, values in data.items() if values
+    },
+    "std_dev.csv": {
+        metric: np.std(values, ddof=1) if len(values) > 1 else 0.0
+        for metric, values in data.items() if values
+    },
 }
 
 # Save each statistic to its respective CSV file
