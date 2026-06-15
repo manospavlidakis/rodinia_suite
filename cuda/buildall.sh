@@ -141,11 +141,6 @@ if [[ "${PRINT_CONFIG}" == "true" ]]; then
   exit 0
 fi
 
-if [[ "${SPECTRAL}" == "true" ]]; then
-  echo "Run with Spectral"
-else
-  echo "Run without Spectral"
-fi
 
 if [[ "${BREAKDOWNS}" == "true" ]]; then
   echo "Breakdowns: ENABLED"
