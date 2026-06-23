@@ -5,22 +5,19 @@ Rodinia CUDA build script
 
 Usage:
   buildall.sh [options]
-  buildall.sh <CUDA_DIR> <SM_VERSION> <SPECTRAL_FLAG>   (legacy)
+  buildall.sh <CUDA_DIR> <SM_VERSION>   (legacy)
 
 Options:
   --cuda <path>        Path to CUDA toolkit root (e.g., /usr/local/cuda, /opt/cuda-12.4)
   --sm <NN>            SM version (e.g., 86, 89, 90). Default: 86
   --breakdowns         Enable BREAKDOWNS (-DBREAKDOWNS)
   --no-breakdowns      Disable BREAKDOWNS (default)
-  --spectral           Enable "spectral" mode (equivalent to SPECTRAL=true)
-  --no-spectral        Disable spectral mode (default)
   --print-config       Print resolved configuration and exit
   -h, --help           Show this help
 
 Environment variables (alternative to args):
   CUDA_DIR             CUDA toolkit root
   SM_VERSION           SM version
-  SPECTRAL             true/false
   BREAKDOWNS           true/false
 
 Examples:
@@ -33,11 +30,8 @@ Examples:
   # enable breakdowns
   ./buildall.sh --breakdowns
 
-  # spectral + breakdowns
-  ./buildall.sh --spectral --breakdowns --cuda /usr/local/cuda --sm 86
-
   # legacy positional
-  ./buildall.sh /usr/local/cuda-12.9 86 true
+  ./buildall.sh /usr/local/cuda-12.9 86
 EOF
 }
 
@@ -79,7 +73,6 @@ detect_cuda_dir() {
 # Defaults from env (if set)
 CUDA_DIR="${CUDA_DIR:-}"
 SM_VERSION="${SM_VERSION:-89}"
-SPECTRAL="${SPECTRAL:-false}"
 BREAKDOWNS="${BREAKDOWNS:-false}"
 PRINT_CONFIG="false"
 
@@ -90,8 +83,6 @@ while [[ $# -gt 0 ]]; do
     -h|--help) usage; exit 0 ;;
     --cuda) CUDA_DIR="${2:-}"; shift 2 ;;
     --sm) SM_VERSION="${2:-}"; shift 2 ;;
-    --spectral) SPECTRAL="true"; shift ;;
-    --no-spectral) SPECTRAL="false"; shift ;;
     --breakdowns) BREAKDOWNS="true"; shift ;;
     --no-breakdowns) BREAKDOWNS="false"; shift ;;
     --print-config) PRINT_CONFIG="true"; shift ;;
@@ -105,10 +96,9 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-# Legacy positional: <CUDA_DIR> <SM_VERSION> <SPECTRAL_FLAG>
+# Legacy positional: <CUDA_DIR> <SM_VERSION>
 if [[ ${#positional[@]} -ge 1 && -z "${CUDA_DIR}" ]]; then CUDA_DIR="${positional[0]}"; fi
 if [[ ${#positional[@]} -ge 2 && "${SM_VERSION}" == "86" ]]; then SM_VERSION="${positional[1]}"; fi
-if [[ ${#positional[@]} -ge 3 ]]; then SPECTRAL="${positional[2]}"; fi
 
 # Resolve CUDA dir
 if [[ -z "${CUDA_DIR}" ]]; then
@@ -136,7 +126,6 @@ if [[ "${PRINT_CONFIG}" == "true" ]]; then
   echo "CUDA_DIR=${CUDA_DIR}"
   echo "CUDA_LIB_DIR=${CUDA_LIB_DIR}"
   echo "SM_VERSION=${SM_VERSION}"
-  echo "SPECTRAL=${SPECTRAL}"
   echo "BREAKDOWNS=${BREAKDOWNS}"
   exit 0
 fi
@@ -181,3 +170,4 @@ for mf in $(find "${SCRIPT_DIR}" -name 'Makefile'); do
 done
 
 echo -e "\nCompilation complete."
+
