@@ -9,16 +9,21 @@ Usage:
   ./runRodiniaWithIntervals.sh [--help]
 
 This script is env-var driven (no positional args).
-By default it does NOT re-run benchmarks; it only parses existing per-app outputs (average.csv).
+By default it does NOT re-run benchmarks; it parses existing per-app statistics CSVs
+(average.csv, min.csv, max.csv, median.csv, iqr.csv, std_dev.csv).
 
 Environment variables:
   RERUN_APPS=0|1        0=reuse existing outputs (default), 1=run ./run.sh per app per iteration
   DO_BREAKDOWNS=0|1     0=skip breakdown aggregation (default), 1=aggregate breakdown CSVs
   RUNS=<N>              Number of iterations (default: 5)
   SLEEP_SECS=<secs>     Sleep between iterations (default: 0; only used when RERUN_APPS=1)
-  GPU_ID=<id>           Sets HIP_VISIBLE_DEVICES=<id>
   OUT_DIR=<dir>         Output dir name (default: results)
-  LABEL=<str>           Optional label added to output filenames (e.g., hip/scale)
+  LABEL=<str>           Optional label added to output filenames (e.g., cuda/scale)
+
+GPU selection:
+  AMD_GPU_ID=<id>       Sets HIP_VISIBLE_DEVICES=<id>   (preferred for HIP runner)
+  GPU_ID=<id>           Back-compat alias for HIP_VISIBLE_DEVICES=<id>
+  NVIDIA_GPU_ID=<id>    Ignored by HIP runner (use the CUDA runner instead)
 
 Examples:
   # Default: parse existing average.csv only (no reruns)
@@ -28,10 +33,18 @@ Examples:
   DO_BREAKDOWNS=1 ./runRodiniaWithIntervals.sh
 
   # Re-run all benchmarks 5 times, sleep 10 minutes between iterations, GPU 0, plus breakdowns
-  LABEL=hip GPU_ID=0 RUNS=5 SLEEP_SECS=600 RERUN_APPS=1 DO_BREAKDOWNS=1 ./runRodiniaWithIntervals.sh
+  LABEL=hip AMD_GPU_ID=0 RUNS=5 SLEEP_SECS=600 RERUN_APPS=1 DO_BREAKDOWNS=1 ./runRodiniaWithIntervals.sh
 
-  # Select GPU 1
+  # Back-compat GPU selector
   GPU_ID=1 ./runRodiniaWithIntervals.sh
+
+  # What we report:
+  - min = minimum of the 5 per-round mins
+  - max = maximum of the 5 per-round maxes
+  - avg = average of the 5 per-round averages
+  - median = average of the 5 per-round medians
+  - iqr = average of the 5 per-round IQRs
+  - std_dev = average of the 5 per-round std_devs
 EOF
 }
 
@@ -56,16 +69,54 @@ SLEEP_SECS=${SLEEP_SECS:-0}
 OUT_DIR=${OUT_DIR:-results}
 OUT_DIR="${ROOT_DIR}/${OUT_DIR}"
 LABEL=${LABEL:-}
+
+# Back-compat GPU selector
 GPU_ID=${GPU_ID:-}
+
+# New per-vendor selectors
+NVIDIA_GPU_ID=${NVIDIA_GPU_ID:-}
+AMD_GPU_ID=${AMD_GPU_ID:-}
 
 RERUN_APPS=${RERUN_APPS:-0}         # 0=reuse (default), 1=rerun ./run.sh
 DO_BREAKDOWNS=${DO_BREAKDOWNS:-0}   # 0=skip breakdown aggregation (default), 1=aggregate breakdowns
 
+# Correctness check (VERIFY=1), per app: every output the app writes is compared
+# with its native (NVIDIA) reference in ${REF_DIR}/<app>/ by VERIFY_CMD
+# (common/compare_results.py: integers and binary files exact, other numbers
+# within a relative tolerance, since GPUs/compilers legitimately differ in the
+# last printed digit). run.sh exits non-zero if any of its runs failed, which
+# is a FAIL too. Anything but OK counts as a correctness failure.
+#   REF_DIR     directory holding <app>/<reference> (default: ../cuda, the
+#               same native references the CUDA runner uses)
+#   VERIFY_CMD  comparator "CMD OUT REF" (default common/compare_results.py;
+#               e.g. VERIFY_CMD="cmp -s" for byte-exact)
+VERIFY=${VERIFY:-1}
+REF_DIR=${REF_DIR:-${ROOT_DIR}/../cuda}
+VERIFY_CMD=${VERIFY_CMD:-${ROOT_DIR}/../common/compare_results.py}
+# "<output>:<reference>" pairs written by each app
+ref_pairs() {
+  case "$1" in
+    cfd)   echo "result_density.txt:nat_result_density.txt result_momentum.txt:nat_result_momentum.txt result_density_energy.txt:nat_result_density_energy.txt" ;;
+    dwt2d) echo "rgb.bmp.dwt.r:rgb.bmp.dwt_nat.r rgb.bmp.dwt.g:rgb.bmp.dwt_nat.g rgb.bmp.dwt.b:rgb.bmp.dwt_nat.b" ;;
+    *)     echo "result.txt:nat_result.txt" ;;
+  esac
+}
+VERIFY_FAILS=0
+
 mkdir -p "${OUT_DIR}"
 
-if [[ -n "${GPU_ID}" ]]; then
+# Vendor-aware GPU selection
+# Precedence: AMD_GPU_ID > GPU_ID
+if [[ -n "${NVIDIA_GPU_ID}" ]]; then
+  echo "[ WARN              ] NVIDIA_GPU_ID is set (${NVIDIA_GPU_ID}) but this is the HIP runner; ignoring." >&2
+fi
+
+if [[ -n "${AMD_GPU_ID}" ]]; then
+  export HIP_VISIBLE_DEVICES="${AMD_GPU_ID}"
+  echo "[ GPU SELECTED       ] HIP_VISIBLE_DEVICES=${HIP_VISIBLE_DEVICES} (from AMD_GPU_ID)"
+elif [[ -n "${GPU_ID}" ]]; then
   export HIP_VISIBLE_DEVICES="${GPU_ID}"
-  echo "[ GPU SELECTED       ] HIP_VISIBLE_DEVICES=${HIP_VISIBLE_DEVICES}"
+  echo "[ GPU SELECTED       ] HIP_VISIBLE_DEVICES=${HIP_VISIBLE_DEVICES} (from GPU_ID)"
 fi
 
 timestamp="$(date +%Y%m%d_%H%M%S)"
@@ -81,7 +132,9 @@ summary_csv="${base}_summary.csv"
 break_iter_csv="${base}_breakdowns_per_iteration.csv"
 break_summary_csv="${base}_breakdowns_summary.csv"
 
-echo "iteration,benchmark,avg_ms" > "${per_iter_csv}"
+echo "iteration,benchmark,avg_ms,min_ms,max_ms,median_ms,iqr_ms,std_dev_ms" > "${per_iter_csv}"
+verify_csv="${base}_verify.csv"
+[[ "${VERIFY}" == "1" ]] && echo "iteration,benchmark,run_rc,verify" > "${verify_csv}"
 if [[ "${DO_BREAKDOWNS}" == "1" ]]; then
   echo "iteration,benchmark,metric,avg_ms" > "${break_iter_csv}"
 fi
@@ -90,13 +143,32 @@ echo "[===================]"
 echo "[ MODE              ] RERUN_APPS=${RERUN_APPS} (0=reuse outputs, 1=run apps)"
 echo "[ BREAKDOWNS        ] DO_BREAKDOWNS=${DO_BREAKDOWNS} (0=skip, 1=aggregate)"
 
-extract_avg_ms() {
-  if [[ -f "average.csv" ]]; then
-    grep -m1 "Computation" "average.csv" | awk -F',' '{printf "%.2f", $2}'
+extract_metric_ms() {
+  local file="$1"
+  local metric="$2"
+
+  if [[ -f "${file}" ]]; then
+    awk -F',' -v metric="${metric}" '
+      NR > 1 {
+        gsub(/^[ \t]+|[ \t]+$/, "", $1)
+        gsub(/^[ \t]+|[ \t]+$/, "", $2)
+        if ($1 == metric && $2 != "") {
+          printf "%.2f", $2
+          exit
+        }
+      }
+    ' "${file}"
   else
     echo ""
   fi
 }
+
+extract_avg_ms()    { extract_metric_ms "average.csv"  "Computation"; }
+extract_min_ms()    { extract_metric_ms "min.csv"      "Computation"; }
+extract_max_ms()    { extract_metric_ms "max.csv"      "Computation"; }
+extract_median_ms() { extract_metric_ms "median.csv"   "Computation"; }
+extract_iqr_ms()    { extract_metric_ms "iqr.csv"      "Computation"; }
+extract_stddev_ms() { extract_metric_ms "std_dev.csv"  "Computation"; }
 
 extract_breakdowns() {
   if [[ -f "average_breakdowns.csv" ]]; then
@@ -118,19 +190,46 @@ for ((iter=1; iter<=RUNS; iter++)); do
 
     path="$(pwd)"
 
+    rc_run=0
     if [[ "${RERUN_APPS}" == "1" ]]; then
-      ./run.sh "${path}" "${b}.csv" || true
+      ./run.sh "${path}" "${b}.csv"; rc_run=$?
     fi
 
-    value="$(extract_avg_ms)"
-    if [[ -n "${value}" ]]; then
-      echo "[   AVG GPU time    ] $value ms"
-      echo "${iter},${b},${value}" >> "${per_iter_csv}"
-    else
-      echo "[   AVG GPU time    ] NA ms"
-      echo "${iter},${b}," >> "${per_iter_csv}"
+    # Correctness check (still cd'd in the app's dir); run.sh deletes the outputs
+    # before every run, so a crashed run cannot pass on a stale file.
+    if [[ "${VERIFY}" == "1" && "${RERUN_APPS}" == "1" ]]; then
+      if [[ "${rc_run}" -ne 0 ]]; then
+        verify="FAIL"
+      else
+        verify="OK"
+        for pair in $(ref_pairs "${b}"); do
+          out="${pair%%:*}"; ref="${REF_DIR}/${b}/${pair#*:}"
+          if [[ ! -f "${ref}" ]]; then verify="NOREF"; break; fi
+          if [[ ! -f "${out}" ]]; then verify="NORESULT"; break; fi
+          msg="$(${VERIFY_CMD} "${out}" "${ref}" 2>&1)" || verify="FAIL"
+          echo "[   COMPARE         ] ${out}: ${msg}"
+        done
+      fi
+      echo "[   VERIFY          ] ${verify} (run_rc=${rc_run})"
+      echo "${iter},${b},${rc_run},${verify}" >> "${verify_csv}"
+      [[ "${verify}" != "OK" ]] && VERIFY_FAILS=$((VERIFY_FAILS + 1))
     fi
 
+    avg_val="$(extract_avg_ms)"
+    min_val="$(extract_min_ms)"
+    max_val="$(extract_max_ms)"
+    median_val="$(extract_median_ms)"
+    iqr_val="$(extract_iqr_ms)"
+    stddev_val="$(extract_stddev_ms)"
+
+    echo "[   AVG GPU time    ] ${avg_val:-NA} ms"
+    echo "[   MIN GPU time    ] ${min_val:-NA} ms"
+    echo "[   MAX GPU time    ] ${max_val:-NA} ms"
+    echo "[   MEDIAN GPU time ] ${median_val:-NA} ms"
+    echo "[   IQR GPU time    ] ${iqr_val:-NA} ms"
+    echo "[   STDDEV GPU time ] ${stddev_val:-NA} ms"
+
+    echo "${iter},${b},${avg_val},${min_val},${max_val},${median_val},${iqr_val},${stddev_val}" >> "${per_iter_csv}"  # CHANGED: store all stats per iteration
     if [[ "${DO_BREAKDOWNS}" == "1" ]]; then
       if [[ -x "${ROOT_DIR}/find_avg_per_app_break.py" ]]; then
         "${ROOT_DIR}/find_avg_per_app_break.py" "${b}" || true
@@ -155,21 +254,65 @@ done
 
 echo "[===================] $total_benchmarks apps processed."
 
-echo "benchmark,min_ms,max_ms,avg_ms,samples" > "${summary_csv}"
+if [[ "${VERIFY}" == "1" && "${RERUN_APPS}" == "1" ]]; then
+  echo "[ VERIFY            ] ${VERIFY_FAILS} app-iteration(s) FAILED correctness (see ${verify_csv})"
+  if [[ "${VERIFY_FAILS}" -gt 0 ]]; then
+    awk -F, 'NR>1 && $4!="OK"{printf "    %-6s bench=%s iter=%s run_rc=%s\n",$4,$2,$1,$3}' "${verify_csv}"
+  fi
+fi
+
+echo "benchmark,min_ms,max_ms,avg_ms,median_ms,iqr_ms,std_dev_ms,samples" > "${summary_csv}"  # CHANGED: expanded summary CSV schema
 for b in "${benchmarks[@]}"; do
   awk -F',' -v bench="${b}" '
     NR==1 { next }
-    $2==bench && $3!="" {
-      v=$3+0.0
-      if (!seen) { min=v; max=v; seen=1 }
-      if (v<min) min=v
-      if (v>max) max=v
-      sum+=v
-      cnt+=1
+    $2==bench {
+      if ($3 != "") {
+        avg_v = $3 + 0.0
+        avg_sum += avg_v
+        avg_cnt += 1
+      }
+      if ($4 != "") {
+        min_v = $4 + 0.0
+        if (!min_seen || min_v < min_all) {
+          min_all = min_v
+          min_seen = 1
+        }
+      }
+      if ($5 != "") {
+        max_v = $5 + 0.0
+        if (!max_seen || max_v > max_all) {
+          max_all = max_v
+          max_seen = 1
+        }
+      }
+      if ($6 != "") {
+        median_v = $6 + 0.0
+        median_sum += median_v
+        median_cnt += 1
+      }
+      if ($7 != "") {
+        iqr_v = $7 + 0.0
+        iqr_sum += iqr_v
+        iqr_cnt += 1
+      }
+      if ($8 != "") {
+        std_v = $8 + 0.0
+        std_sum += std_v
+        std_cnt += 1
+      }
     }
     END {
-      if (cnt>0) printf "%s,%.2f,%.2f,%.2f,%d\n", bench, min, max, sum/cnt, cnt;
-      else       printf "%s,,,,0\n", bench;
+      printf "%s,", bench
+
+      if (min_seen)     printf "%.2f,", min_all; else printf ","
+      if (max_seen)     printf "%.2f,", max_all; else printf ","
+      if (avg_cnt>0)    printf "%.2f,", avg_sum/avg_cnt; else printf ","
+      if (median_cnt>0) printf "%.2f,", median_sum/median_cnt; else printf ","
+      if (iqr_cnt>0)    printf "%.2f,", iqr_sum/iqr_cnt; else printf ","
+      if (std_cnt>0)    printf "%.2f,", std_sum/std_cnt; else printf ","
+
+      samples = avg_cnt
+      printf "%d\n", samples
     }
   ' "${per_iter_csv}" >> "${summary_csv}"
 done

@@ -145,7 +145,6 @@ fi
 AMDGPU_TARGETS="${GFX_ARCH}"
 CXXFLAGS=" -m64 -O3"
 CXXFLAGS+=" -DOUTPUT"
-CXXFLAGS+=" -DDISABLE_HIP_CHECK"
 
 # Enable/disable breakdowns via flag
 if [[ "${BREAKDOWNS}" == "true" ]]; then

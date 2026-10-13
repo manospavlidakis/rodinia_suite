@@ -5,8 +5,11 @@ benchmark_name="${file%.csv}"
 #echo "Name: ${benchmark_name}"
 #echo "filename: "${file}
 #echo "path: "${path}
+rm -f *_"${file}" average.csv min.csv max.csv median.csv iqr.csv std_dev.csv  # stale logs/stats
+fails=0
 for ((iter=1; iter<=30;iter++))
 do
-./${benchmark_name} ../../data/cfd/fvcorr.domn.193K &>193K_${iter}_${file}
+rm -f result_density.txt result_momentum.txt result_density_energy.txt; ./${benchmark_name} ../../data/cfd/fvcorr.domn.193K &>193K_${iter}_${file} || fails=$((fails+1))
 done
-../find_avg_per_app.py  ${benchmark_name}
+../find_avg_per_app.py  ${benchmark_name} || fails=$((fails+1))
+exit $(( ${fails:-0} > 0 ))

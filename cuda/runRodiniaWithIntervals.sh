@@ -80,19 +80,26 @@ AMD_GPU_ID=${AMD_GPU_ID:-}
 RERUN_APPS=${RERUN_APPS:-0}         # 0=reuse (default), 1=rerun ./run.sh
 DO_BREAKDOWNS=${DO_BREAKDOWNS:-0}   # 0=skip breakdown aggregation (default), 1=aggregate breakdowns
 
-# Correctness check (VERIFY=1), per app, in priority order:
-#   1) GOLDEN compare — the app writes result.txt; nat_result.txt is the committed
-#      native reference. Compare them (default exact `diff -q`); a mismatch means
-#      haishare produced a different result than native.
-#   2) fallback (no nat_result.txt) — scan the app's own self-verify output for FAIL.
-#   plus the run.sh exit code in either case.
-# Surfaces a silently-wrong haishare result instead of hiding it behind the timings.
-#   VERIFY_DIFF_CMD  comparator for result.txt vs nat_result.txt (default 'diff -q';
-#                    set to a tolerance script if an FP benchmark diffs spuriously)
-#   VERIFY_FAIL_RE   failure regex for the self-verify-output fallback
+# Correctness check (VERIFY=1), per app: every output the app writes is compared
+# with its native (NVIDIA) reference in ${REF_DIR}/<app>/ by VERIFY_CMD
+# (common/compare_results.py: integers and binary files exact, other numbers
+# within a relative tolerance, since GPUs/compilers legitimately differ in the
+# last printed digit). run.sh exits non-zero if any of its runs failed, which
+# is a FAIL too. Anything but OK counts as a correctness failure.
+#   REF_DIR     directory holding <app>/<reference> (default: this directory)
+#   VERIFY_CMD  comparator "CMD OUT REF" (default common/compare_results.py;
+#               e.g. VERIFY_CMD="cmp -s" for byte-exact)
 VERIFY=${VERIFY:-1}
-VERIFY_DIFF_CMD="${VERIFY_DIFF_CMD:-diff -q}"
-VERIFY_FAIL_RE=${VERIFY_FAIL_RE:-'FAILED|Test failed|verification failed|do(es)? not match|mismatch|incorrect|wrong result|illegal memory|Segmentation fault|core dumped|terminate called|CUDA[ _]error|cudaError|out of memory'}
+REF_DIR=${REF_DIR:-${ROOT_DIR}}
+VERIFY_CMD=${VERIFY_CMD:-${ROOT_DIR}/../common/compare_results.py}
+# "<output>:<reference>" pairs written by each app
+ref_pairs() {
+  case "$1" in
+    cfd)   echo "result_density.txt:nat_result_density.txt result_momentum.txt:nat_result_momentum.txt result_density_energy.txt:nat_result_density_energy.txt" ;;
+    dwt2d) echo "rgb.bmp.dwt.r:rgb.bmp.dwt_nat.r rgb.bmp.dwt.g:rgb.bmp.dwt_nat.g rgb.bmp.dwt.b:rgb.bmp.dwt_nat.b" ;;
+    *)     echo "result.txt:nat_result.txt" ;;
+  esac
+}
 VERIFY_FAILS=0
 
 mkdir -p "${OUT_DIR}"
@@ -187,33 +194,24 @@ for ((iter=1; iter<=RUNS; iter++)); do
       ./run.sh "${path}" "${b}.csv"; rc_run=$?
     fi
 
-    # Correctness check (still cd'd in the app's dir): prefer the GOLDEN compare
-    # (result.txt vs nat_result.txt); fall back to scanning the app's own self-verify
-    # output (<size>_<iter>_<b>.csv). run.sh exit code (rc_run) gates both.
+    # Correctness check (still cd'd in the app's dir); run.sh deletes the outputs
+    # before every run, so a crashed run cannot pass on a stale file.
     if [[ "${VERIFY}" == "1" && "${RERUN_APPS}" == "1" ]]; then
       if [[ "${rc_run}" -ne 0 ]]; then
         verify="FAIL"
-      elif [[ -f nat_result.txt ]]; then
-        if [[ ! -f result.txt ]]; then
-          verify="NORESULT"
-        elif ${VERIFY_DIFF_CMD} result.txt nat_result.txt >/dev/null 2>&1; then
-          verify="OK"
-        else
-          verify="FAIL"
-        fi
       else
-        shopt -s nullglob; verify_logs=( *_"${b}.csv" ); shopt -u nullglob
-        if [[ "${#verify_logs[@]}" -eq 0 ]]; then
-          verify="NOLOG"
-        elif grep -qiE "${VERIFY_FAIL_RE}" "${verify_logs[@]}" 2>/dev/null; then
-          verify="FAIL"
-        else
-          verify="OK"
-        fi
+        verify="OK"
+        for pair in $(ref_pairs "${b}"); do
+          out="${pair%%:*}"; ref="${REF_DIR}/${b}/${pair#*:}"
+          if [[ ! -f "${ref}" ]]; then verify="NOREF"; break; fi
+          if [[ ! -f "${out}" ]]; then verify="NORESULT"; break; fi
+          msg="$(${VERIFY_CMD} "${out}" "${ref}" 2>&1)" || verify="FAIL"
+          echo "[   COMPARE         ] ${out}: ${msg}"
+        done
       fi
       echo "[   VERIFY          ] ${verify} (run_rc=${rc_run})"
       echo "${iter},${b},${rc_run},${verify}" >> "${verify_csv}"
-      [[ "${verify}" == "FAIL" ]] && VERIFY_FAILS=$((VERIFY_FAILS + 1))
+      [[ "${verify}" != "OK" ]] && VERIFY_FAILS=$((VERIFY_FAILS + 1))
     fi
 
     avg_val="$(extract_avg_ms)"

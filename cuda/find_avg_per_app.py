@@ -42,6 +42,13 @@ for file in csv_files:
                 except ValueError:
                     print(f"Warning: Skipping invalid value in file {file}: {line.strip()}")
 
+# Every run prints "Computation" exactly once; a missing sample means that run
+# crashed or failed, so do not report statistics that silently drop it.
+if len(data["Computation"]) != len(csv_files):
+    print(f"ERROR: {benchmark}: {len(data['Computation'])} Computation samples "
+          f"in {len(csv_files)} logs", file=sys.stderr)
+    sys.exit(1)
+
 # Compute statistics and save each to a separate CSV file
 stats_dict = {
     "average.csv": {
