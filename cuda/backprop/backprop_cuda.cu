@@ -15,31 +15,31 @@
 #include "imagenet.h"
 
 #ifdef BREAKDOWNS
-std::chrono::high_resolution_clock::time_point s_b0;
-std::chrono::high_resolution_clock::time_point e_b0;
-std::chrono::high_resolution_clock::time_point s_b1;
-std::chrono::high_resolution_clock::time_point e_b1;
-std::chrono::high_resolution_clock::time_point s_b2;
-std::chrono::high_resolution_clock::time_point e_b2;
-std::chrono::high_resolution_clock::time_point s_b3;
-std::chrono::high_resolution_clock::time_point e_b3;
-std::chrono::high_resolution_clock::time_point s_b4;
-std::chrono::high_resolution_clock::time_point e_b4;
-std::chrono::high_resolution_clock::time_point s_b5;
-std::chrono::high_resolution_clock::time_point e_b5;
-std::chrono::high_resolution_clock::time_point s_b6;
-std::chrono::high_resolution_clock::time_point e_b6;
-std::chrono::high_resolution_clock::time_point s_b7;
-std::chrono::high_resolution_clock::time_point e_b7;
-std::chrono::high_resolution_clock::time_point s_b8;
-std::chrono::high_resolution_clock::time_point e_b8;
+std::chrono::steady_clock::time_point s_b0;
+std::chrono::steady_clock::time_point e_b0;
+std::chrono::steady_clock::time_point s_b1;
+std::chrono::steady_clock::time_point e_b1;
+std::chrono::steady_clock::time_point s_b2;
+std::chrono::steady_clock::time_point e_b2;
+std::chrono::steady_clock::time_point s_b3;
+std::chrono::steady_clock::time_point e_b3;
+std::chrono::steady_clock::time_point s_b4;
+std::chrono::steady_clock::time_point e_b4;
+std::chrono::steady_clock::time_point s_b5;
+std::chrono::steady_clock::time_point e_b5;
+std::chrono::steady_clock::time_point s_b6;
+std::chrono::steady_clock::time_point e_b6;
+std::chrono::steady_clock::time_point s_b7;
+std::chrono::steady_clock::time_point e_b7;
+std::chrono::steady_clock::time_point s_b8;
+std::chrono::steady_clock::time_point e_b8;
 #endif
 
 #define WARMUP
-std::chrono::high_resolution_clock::time_point s_compute;
-std::chrono::high_resolution_clock::time_point e_compute;
-std::chrono::high_resolution_clock::time_point start_warmup;
-std::chrono::high_resolution_clock::time_point end_warmup;
+std::chrono::steady_clock::time_point s_compute;
+std::chrono::steady_clock::time_point e_compute;
+std::chrono::steady_clock::time_point start_warmup;
+std::chrono::steady_clock::time_point end_warmup;
 
 unsigned int num_threads = 0;
 unsigned int num_blocks = 0;
@@ -48,9 +48,9 @@ unsigned int num_blocks = 0;
 // Program main
 ////////////////////////////////////////////////////////////////////////////////
 int main(int argc, char **argv) {
-  auto start_all = std::chrono::high_resolution_clock::now();
+  auto start_all = std::chrono::steady_clock::now();
   setup(argc, argv);
-  auto end_all = std::chrono::high_resolution_clock::now();
+  auto end_all = std::chrono::steady_clock::now();
   std::chrono::duration<double, std::milli> elapsed_milli = end_all - start_all;
   std::cerr << "Elapsed time: " << elapsed_milli.count() << " ms" << std::endl;
 }
@@ -93,20 +93,20 @@ extern "C" void bpnn_train_cuda(BPNN *net, float *eo, float *eh) {
     }
   }
 #ifdef WARMUP
-  start_warmup = std::chrono::high_resolution_clock::now();
+  start_warmup = std::chrono::steady_clock::now();
   // Warmup
   double *warm;
   cudaMalloc((void **)&warm, sizeof(double) * 100000);
   cudaStream_t stream;
   cudaStreamCreateWithFlags(&stream, cudaStreamNonBlocking);
   cudaFree(warm);
-  end_warmup = std::chrono::high_resolution_clock::now();
+  end_warmup = std::chrono::steady_clock::now();
 #endif
 
-  s_compute = std::chrono::high_resolution_clock::now();
+  s_compute = std::chrono::steady_clock::now();
 
 #ifdef BREAKDOWNS
-  s_b0 = std::chrono::high_resolution_clock::now();
+  s_b0 = std::chrono::steady_clock::now();
 #endif
 
   cudaMalloc((void **)&input_cuda, (in + 1) * sizeof(float));
@@ -116,16 +116,16 @@ extern "C" void bpnn_train_cuda(BPNN *net, float *eo, float *eh) {
 
 #ifdef BREAKDOWNS
   cudaDeviceSynchronize();
-  e_b0 = std::chrono::high_resolution_clock::now();
-  s_b2 = std::chrono::high_resolution_clock::now();
+  e_b0 = std::chrono::steady_clock::now();
+  s_b2 = std::chrono::steady_clock::now();
 #endif
 
   cudaMemcpy(input_cuda, net->input_units, (in + 1) * sizeof(float), cudaMemcpyHostToDevice);
   cudaMemcpy(input_hidden_cuda, input_weights_one_dim, (in + 1) * (hid + 1) * sizeof(float), cudaMemcpyHostToDevice);
 
 #ifdef BREAKDOWNS
-  e_b2 = std::chrono::high_resolution_clock::now();
-  s_b1 = std::chrono::high_resolution_clock::now();
+  e_b2 = std::chrono::steady_clock::now();
+  s_b1 = std::chrono::steady_clock::now();
 #endif
 
   bpnn_layerforward_CUDA<<<grid, threads>>>(input_cuda, output_hidden_cuda, input_hidden_cuda,
@@ -133,14 +133,14 @@ extern "C" void bpnn_train_cuda(BPNN *net, float *eo, float *eh) {
   cudaDeviceSynchronize();
 
 #ifdef BREAKDOWNS
-  e_b1 = std::chrono::high_resolution_clock::now();
-  s_b3 = std::chrono::high_resolution_clock::now();
+  e_b1 = std::chrono::steady_clock::now();
+  s_b3 = std::chrono::steady_clock::now();
 #endif
 
   cudaMemcpy(partial_sum, hidden_partial_sum, num_blocks * WIDTH * sizeof(float), cudaMemcpyDeviceToHost);
 
 #ifdef BREAKDOWNS
-  e_b3 = std::chrono::high_resolution_clock::now();
+  e_b3 = std::chrono::steady_clock::now();
 #endif
 
   for (int j = 1; j <= hid; j++) {
@@ -158,7 +158,7 @@ extern "C" void bpnn_train_cuda(BPNN *net, float *eo, float *eh) {
   bpnn_adjust_weights(net->output_delta, out, net->hidden_units, hid, net->hidden_weights, net->hidden_prev_weights);
 
 #ifdef BREAKDOWNS
-  s_b4 = std::chrono::high_resolution_clock::now();
+  s_b4 = std::chrono::steady_clock::now();
 #endif
 
   cudaMalloc((void **)&hidden_delta_cuda, (hid + 1) * sizeof(float));
@@ -166,8 +166,8 @@ extern "C" void bpnn_train_cuda(BPNN *net, float *eo, float *eh) {
 
 #ifdef BREAKDOWNS
   cudaDeviceSynchronize();
-  e_b4 = std::chrono::high_resolution_clock::now();
-  s_b5 = std::chrono::high_resolution_clock::now();
+  e_b4 = std::chrono::steady_clock::now();
+  s_b5 = std::chrono::steady_clock::now();
 #endif
 
   cudaMemcpy(hidden_delta_cuda, net->hidden_delta, (hid + 1) * sizeof(float),
@@ -178,8 +178,8 @@ extern "C" void bpnn_train_cuda(BPNN *net, float *eo, float *eh) {
              (in + 1) * (hid + 1) * sizeof(float), cudaMemcpyHostToDevice);
 
 #ifdef BREAKDOWNS
-  e_b5 = std::chrono::high_resolution_clock::now();
-  s_b6 = std::chrono::high_resolution_clock::now();
+  e_b5 = std::chrono::steady_clock::now();
+  s_b6 = std::chrono::steady_clock::now();
 #endif
 
   bpnn_adjust_weights_cuda<<<grid, threads>>>(hidden_delta_cuda, hid,
@@ -187,8 +187,8 @@ extern "C" void bpnn_train_cuda(BPNN *net, float *eo, float *eh) {
                                               input_prev_weights_cuda);
 #ifdef BREAKDOWNS
   cudaDeviceSynchronize();
-  e_b6 = std::chrono::high_resolution_clock::now();
-  s_b7 = std::chrono::high_resolution_clock::now();
+  e_b6 = std::chrono::steady_clock::now();
+  s_b7 = std::chrono::steady_clock::now();
 #endif
 
   cudaMemcpy(net->input_units, input_cuda, (in + 1) * sizeof(float),
@@ -197,8 +197,8 @@ extern "C" void bpnn_train_cuda(BPNN *net, float *eo, float *eh) {
              (in + 1) * (hid + 1) * sizeof(float), cudaMemcpyDeviceToHost);
 
 #ifdef BREAKDOWNS
-  e_b7 = std::chrono::high_resolution_clock::now();
-  s_b8 = std::chrono::high_resolution_clock::now();
+  e_b7 = std::chrono::steady_clock::now();
+  s_b8 = std::chrono::steady_clock::now();
 #endif
 
   cudaFree(input_cuda);
@@ -209,9 +209,9 @@ extern "C" void bpnn_train_cuda(BPNN *net, float *eo, float *eh) {
   cudaFree(hidden_delta_cuda);
 #ifdef BREAKDOWNS
   cudaDeviceSynchronize();
-  e_b8 = std::chrono::high_resolution_clock::now();
+  e_b8 = std::chrono::steady_clock::now();
 #endif
-  e_compute = std::chrono::high_resolution_clock::now();
+  e_compute = std::chrono::steady_clock::now();
   // Open a file for output
   std::ofstream outfile("result.txt");
   if (!outfile) {
@@ -220,6 +220,16 @@ extern "C" void bpnn_train_cuda(BPNN *net, float *eo, float *eh) {
   }
   for (int i = 0; i < 1000; i++) {
     outfile << input_weights_one_dim[i] << std::endl;
+  }
+  // GPU-produced values from bpnn_layerforward: the per-hidden-unit sums of the
+  // partial sums. The weights above alone check nothing: with this input the
+  // hidden layer saturates (sigmoid == 1.0f), so hidden_delta == 0 and
+  // bpnn_adjust_weights leaves every weight unchanged.
+  for (int j = 1; j <= hid; j++) {
+    float s = 0.0f;
+    for (int k = 0; k < num_blocks; k++)
+      s += partial_sum[k * hid + j - 1];
+    outfile << s << std::endl;
   }
 #ifdef WARMUP
   std::chrono::duration<double, std::milli> elapsed_milli_warmup = end_warmup - start_warmup;

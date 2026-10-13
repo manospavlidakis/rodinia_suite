@@ -28,10 +28,10 @@
 #include <iostream>
 #include <sys/time.h>
 #define WARMUP
-std::chrono::high_resolution_clock::time_point s_compute;
-std::chrono::high_resolution_clock::time_point e_compute;
-std::chrono::high_resolution_clock::time_point start_warmup;
-std::chrono::high_resolution_clock::time_point end_warmup;
+std::chrono::steady_clock::time_point s_compute;
+std::chrono::steady_clock::time_point e_compute;
+std::chrono::steady_clock::time_point start_warmup;
+std::chrono::steady_clock::time_point end_warmup;
 #ifdef BREAKDOWNS
 double g_huffman_alloc_ms = 0.0;
 double g_huffman_h2d_ms = 0.0;
@@ -48,7 +48,7 @@ extern "C" void cpu_vlc_encode(unsigned int *indata, unsigned int num_elements,
                                unsigned int *codewordlens);
 
 int main(int argc, char *argv[]) {
-  auto start = std::chrono::high_resolution_clock::now();
+  auto start = std::chrono::steady_clock::now();
   if (!InitCUDA()) {
     return 0;
   }
@@ -61,7 +61,7 @@ int main(int argc, char *argv[]) {
     runVLCTest(NULL, num_block_threads, 1024);
   }
   CUDA_SAFE_CALL(cudaDeviceReset());
-  auto end = std::chrono::high_resolution_clock::now();
+  auto end = std::chrono::steady_clock::now();
   std::chrono::duration<double, std::milli> elapsed_milli = end - start;
   std::cerr << "Elapsed time: " << elapsed_milli.count() << " ms" << std::endl;
   return 0;
@@ -70,14 +70,14 @@ int main(int argc, char *argv[]) {
 void runVLCTest(char *file_name, uint num_block_threads, uint num_blocks) {
   // printf("CUDA! Starting VLC Tests!\n");
 #ifdef WARMUP
-  start_warmup = std::chrono::high_resolution_clock::now();
+  start_warmup = std::chrono::steady_clock::now();
   // Warmup
   double *warm;
   cudaMalloc((void **)&warm, sizeof(double) * 100000);
   cudaStream_t stream;
   cudaStreamCreateWithFlags(&stream, cudaStreamNonBlocking);
   cudaFree(warm);
-  end_warmup = std::chrono::high_resolution_clock::now();
+  end_warmup = std::chrono::steady_clock::now();
 #endif
   unsigned int
       num_elements;      // uint num_elements = num_blocks * num_block_threads;
@@ -115,7 +115,7 @@ void runVLCTest(char *file_name, uint num_block_threads, uint num_blocks) {
   unsigned int *d_codewords, *d_codewordlens;
   unsigned int *d_cw32, *d_cw32len, *d_cw32idx, *d_cindex, *d_cindex2;
 #ifdef BREAKDOWNS
-  auto s_alloc = std::chrono::high_resolution_clock::now();
+  auto s_alloc = std::chrono::steady_clock::now();
   auto e_alloc = s_alloc;
   auto s_h2d = s_alloc;
   auto e_h2d = s_alloc;
@@ -125,9 +125,9 @@ void runVLCTest(char *file_name, uint num_block_threads, uint num_blocks) {
   auto e_d2h = s_alloc;
   auto s_free = s_alloc;
   auto e_free = s_alloc;
-  s_alloc = std::chrono::high_resolution_clock::now();
+  s_alloc = std::chrono::steady_clock::now();
 #endif
-  s_compute = std::chrono::high_resolution_clock::now();
+  s_compute = std::chrono::steady_clock::now();
   CUDA_SAFE_CALL(cudaMalloc((void **)&d_sourceData, mem_size));
   CUDA_SAFE_CALL(cudaMalloc((void **)&d_destData, mem_size));
   CUDA_SAFE_CALL(cudaMalloc((void **)&d_destDataPacked, mem_size));
@@ -146,8 +146,8 @@ void runVLCTest(char *file_name, uint num_block_threads, uint num_blocks) {
   CUDA_SAFE_CALL(
       cudaMalloc((void **)&d_cindex2, num_blocks * sizeof(unsigned int)));
 #ifdef BREAKDOWNS
-  e_alloc = std::chrono::high_resolution_clock::now();
-  s_h2d = std::chrono::high_resolution_clock::now();
+  e_alloc = std::chrono::steady_clock::now();
+  s_h2d = std::chrono::steady_clock::now();
 #endif
   CUDA_SAFE_CALL(
       cudaMemcpy(d_sourceData, sourceData, mem_size, cudaMemcpyHostToDevice));
@@ -160,7 +160,7 @@ void runVLCTest(char *file_name, uint num_block_threads, uint num_blocks) {
   CUDA_SAFE_CALL(cudaMemcpy(d_destData, destData, mem_size, cudaMemcpyHostToDevice));
 
 #ifdef BREAKDOWNS
-  e_h2d = std::chrono::high_resolution_clock::now();
+  e_h2d = std::chrono::steady_clock::now();
 #endif
 
   dim3 grid_size(num_blocks, 1, 1);
@@ -177,7 +177,7 @@ void runVLCTest(char *file_name, uint num_block_threads, uint num_blocks) {
   sm_size = 2 * NUM_SYMBOLS * sizeof(int) + block_size.x * sizeof(unsigned int);
 #endif
 #ifdef BREAKDOWNS
-  s_b_compute = std::chrono::high_resolution_clock::now();
+  s_b_compute = std::chrono::steady_clock::now();
 #endif
   for (int i = 0; i < NT; i++) {
     vlc_encode_kernel_sm64huff<<<grid_size, block_size, sm_size>>>(
@@ -186,16 +186,16 @@ void runVLCTest(char *file_name, uint num_block_threads, uint num_blocks) {
   }
   cudaDeviceSynchronize();
 #ifdef BREAKDOWNS
-  e_b_compute = std::chrono::high_resolution_clock::now();
-  s_d2h = std::chrono::high_resolution_clock::now();
+  e_b_compute = std::chrono::steady_clock::now();
+  s_d2h = std::chrono::steady_clock::now();
 #endif
   CUT_CHECK_ERROR("Kernel execution failed\n");
   // Ensure the GPU data is copied back to host memory
   CUDA_SAFE_CALL(
       cudaMemcpy(destData, d_destData, mem_size, cudaMemcpyDeviceToHost));
 #ifdef BREAKDOWNS
-  e_d2h = std::chrono::high_resolution_clock::now();
-  s_free = std::chrono::high_resolution_clock::now();
+  e_d2h = std::chrono::steady_clock::now();
+  s_free = std::chrono::steady_clock::now();
 #endif
   CUDA_SAFE_CALL(cudaFree(d_sourceData));
   CUDA_SAFE_CALL(cudaFree(d_destData));
@@ -208,9 +208,9 @@ void runVLCTest(char *file_name, uint num_block_threads, uint num_blocks) {
   CUDA_SAFE_CALL(cudaFree(d_cindex));
   CUDA_SAFE_CALL(cudaFree(d_cindex2));
 #ifdef BREAKDOWNS
-  e_free = std::chrono::high_resolution_clock::now();
+  e_free = std::chrono::steady_clock::now();
 #endif
-  e_compute = std::chrono::high_resolution_clock::now();
+  e_compute = std::chrono::steady_clock::now();
 #ifdef WARMUP
   std::chrono::duration<double, std::milli> elapsed_milli_warmup = end_warmup - start_warmup;
   std::cerr << "Warmup time: " << elapsed_milli_warmup.count() << " ms" << std::endl;

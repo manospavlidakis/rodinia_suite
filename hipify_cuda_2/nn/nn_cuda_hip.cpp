@@ -18,23 +18,23 @@
 #define LATITUDE_POS                                                           \
   28               // character position of the latitude value in each record
 #define OPEN 10000 // initial value of nearest neighbors
-std::chrono::high_resolution_clock::time_point s_compute;
-std::chrono::high_resolution_clock::time_point e_compute;
-std::chrono::high_resolution_clock::time_point start_warmup;
-std::chrono::high_resolution_clock::time_point end_warmup;
+std::chrono::steady_clock::time_point s_compute;
+std::chrono::steady_clock::time_point e_compute;
+std::chrono::steady_clock::time_point start_warmup;
+std::chrono::steady_clock::time_point end_warmup;
 // #define BREAKDOWNS
 
 #ifdef BREAKDOWNS
-std::chrono::high_resolution_clock::time_point s_b0;
-std::chrono::high_resolution_clock::time_point e_b0;
-std::chrono::high_resolution_clock::time_point s_b1;
-std::chrono::high_resolution_clock::time_point e_b1;
-std::chrono::high_resolution_clock::time_point s_b2;
-std::chrono::high_resolution_clock::time_point e_b2;
-std::chrono::high_resolution_clock::time_point s_b3;
-std::chrono::high_resolution_clock::time_point e_b3;
-std::chrono::high_resolution_clock::time_point s_b4;
-std::chrono::high_resolution_clock::time_point e_b4;
+std::chrono::steady_clock::time_point s_b0;
+std::chrono::steady_clock::time_point e_b0;
+std::chrono::steady_clock::time_point s_b1;
+std::chrono::steady_clock::time_point e_b1;
+std::chrono::steady_clock::time_point s_b2;
+std::chrono::steady_clock::time_point e_b2;
+std::chrono::steady_clock::time_point s_b3;
+std::chrono::steady_clock::time_point e_b3;
+std::chrono::steady_clock::time_point s_b4;
+std::chrono::steady_clock::time_point e_b4;
 #endif
 #define WARMUP
 typedef struct latLong {
@@ -80,8 +80,8 @@ __global__ void euclid(LatLong *d_locations, float *d_distances, int numRecords,
  **/
 
 int main(int argc, char *argv[]) {
-  auto start = std::chrono::high_resolution_clock::now();
-  auto start_0 = std::chrono::high_resolution_clock::now();
+  auto start = std::chrono::steady_clock::now();
+  auto start_0 = std::chrono::steady_clock::now();
   float lat, lng;
   int quiet = 0, timing = 0, platform = 0, device = 0;
 
@@ -101,17 +101,17 @@ int main(int argc, char *argv[]) {
   if (resultsCount > numRecords)
     resultsCount = numRecords;
 
-  auto end_0 = std::chrono::high_resolution_clock::now();
+  auto end_0 = std::chrono::steady_clock::now();
 #ifdef WARMUP
-  start_warmup = std::chrono::high_resolution_clock::now();
+  start_warmup = std::chrono::steady_clock::now();
   double *warm;
   HIP_CHECK(hipMalloc((void **)&warm, sizeof(double) * 100000));
   hipStream_t stream;
   HIP_CHECK(hipStreamCreateWithFlags(&stream, hipStreamNonBlocking));
   HIP_CHECK(hipFree(warm));
-  end_warmup = std::chrono::high_resolution_clock::now();
+  end_warmup = std::chrono::steady_clock::now();
 #endif
-  s_compute = std::chrono::high_resolution_clock::now();
+  s_compute = std::chrono::steady_clock::now();
   // Pointers to host memory
   float *distances;
   // Pointers to device memory
@@ -160,15 +160,15 @@ int main(int argc, char *argv[]) {
    * Allocate memory on host and device
    */
 #ifdef BREAKDOWNS
-  s_b0 = std::chrono::high_resolution_clock::now();
+  s_b0 = std::chrono::steady_clock::now();
 #endif
   distances = (float *)malloc(sizeof(float) * numRecords);
   HIP_CHECK(hipMalloc((void **)&d_locations, sizeof(LatLong) * numRecords));
   HIP_CHECK(hipMalloc((void **)&d_distances, sizeof(float) * numRecords));
 #ifdef BREAKDOWNS
   HIP_CHECK(hipDeviceSynchronize());
-  e_b0 = std::chrono::high_resolution_clock::now();
-  s_b2 = std::chrono::high_resolution_clock::now();
+  e_b0 = std::chrono::steady_clock::now();
+  s_b2 = std::chrono::steady_clock::now();
 #endif
   /**
    * Transfer data from host to device
@@ -176,8 +176,8 @@ int main(int argc, char *argv[]) {
   HIP_CHECK(hipMemcpy(d_locations, &locations[0], sizeof(LatLong) * numRecords,
              hipMemcpyHostToDevice));
 #ifdef BREAKDOWNS
-  e_b2 = std::chrono::high_resolution_clock::now();
-  s_b1 = std::chrono::high_resolution_clock::now();
+  e_b2 = std::chrono::steady_clock::now();
+  s_b1 = std::chrono::steady_clock::now();
 #endif
   /**
    * Execute kernel
@@ -186,38 +186,39 @@ int main(int argc, char *argv[]) {
                                        lat, lng);
 #ifdef BREAKDOWNS
   HIP_CHECK(hipDeviceSynchronize());
-  e_b1 = std::chrono::high_resolution_clock::now();
-  s_b3 = std::chrono::high_resolution_clock::now();
+  e_b1 = std::chrono::steady_clock::now();
+  s_b3 = std::chrono::steady_clock::now();
 #endif
   // Copy data from device memory to host memory
   HIP_CHECK(hipMemcpy(distances, d_distances, sizeof(float) * numRecords,
              hipMemcpyDeviceToHost));
 #ifdef BREAKDOWNS
-  e_b3 = std::chrono::high_resolution_clock::now();
-  s_b4 = std::chrono::high_resolution_clock::now();
+  e_b3 = std::chrono::steady_clock::now();
+  s_b4 = std::chrono::steady_clock::now();
 #endif
   // print out results
   // Free memory
   HIP_CHECK(hipFree(d_locations));
   HIP_CHECK(hipFree(d_distances));
 #ifdef BREAKDOWNS
-  e_b4 = std::chrono::high_resolution_clock::now();
+  e_b4 = std::chrono::steady_clock::now();
 #endif
-  e_compute = std::chrono::high_resolution_clock::now();
+  e_compute = std::chrono::steady_clock::now();
+  // find the resultsCount least distances
+  findLowest(records, distances, numRecords, resultsCount);
 #ifdef OUTPUT
   //std::cerr << " Store results to output!!" << std::endl;
-  // Store the result into a file.
+  // Store the result into a file (after findLowest: records[i].distance
+  // is the GPU-computed distance of the i-th nearest record).
   FILE *fpo = fopen("result.txt", "w");
   for (int i = 0; i < resultsCount; i++)
     fprintf(fpo, "%s --> Distance=%f\n", records[i].recString,
             records[i].distance);
   fclose(fpo);
 #endif
-  // find the resultsCount least distances
-  findLowest(records, distances, numRecords, resultsCount);
 
   free(distances);
-  auto end = std::chrono::high_resolution_clock::now();
+  auto end = std::chrono::steady_clock::now();
   std::chrono::duration<double, std::milli> elapsed_milli_0 = end_0 - start_0;
   //std::cerr << "Init time: " << elapsed_milli_0.count() << " ms" << std::endl;
 
@@ -260,6 +261,10 @@ int loadData(char *filename, std::vector<Record> &records,
   /**Main processing **/
 
   flist = fopen(filename, "r");
+  if (!flist) {
+    perror(filename);
+    exit(1);
+  }
   while (!feof(flist)) {
     /**
      * Read in all records of length REC_LENGTH
@@ -268,7 +273,7 @@ int loadData(char *filename, std::vector<Record> &records,
      */
     if (fscanf(flist, "%s\n", dbname) != 1) {
       fprintf(stderr, "error reading filelist\n");
-      exit(0);
+      exit(1);
     }
     fp = fopen(dbname, "r");
     if (!fp) {
@@ -329,7 +334,7 @@ void findLowest(std::vector<Record> &records, float *distances, int numRecords,
   int i, j;
   float val;
   int minLoc;
-  Record *tempRec;
+  Record tempRec;
   float tempDist;
 
   for (i = 0; i < topN; i++) {
@@ -340,9 +345,9 @@ void findLowest(std::vector<Record> &records, float *distances, int numRecords,
         minLoc = j;
     }
     // swap locations and distances
-    tempRec = &records[i];
+    tempRec = records[i];
     records[i] = records[minLoc];
-    records[minLoc] = *tempRec;
+    records[minLoc] = tempRec;
 
     tempDist = distances[i];
     distances[i] = distances[minLoc];

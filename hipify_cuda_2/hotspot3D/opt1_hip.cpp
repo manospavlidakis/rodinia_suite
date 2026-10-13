@@ -67,7 +67,7 @@ void hotspot_opt1(float *p, float *tIn, float *tOut,
 {
     float ce, cw, cn, cs, ct, cb, cc;
 #ifdef BREAKDOWNS
-    auto s_alloc = std::chrono::high_resolution_clock::now();
+    auto s_alloc = std::chrono::steady_clock::now();
     auto e_alloc = s_alloc;
     auto s_h2d = s_alloc;
     auto e_h2d = s_alloc;
@@ -88,23 +88,23 @@ void hotspot_opt1(float *p, float *tIn, float *tOut,
     size_t s = sizeof(float) * nx * ny * nz;
     float *tIn_d, *tOut_d, *p_d;
 #ifdef BREAKDOWNS
-    s_alloc = std::chrono::high_resolution_clock::now();
+    s_alloc = std::chrono::steady_clock::now();
 #endif
     HIP_CHECK(hipMalloc((void**)&p_d,s));
     HIP_CHECK(hipMalloc((void**)&tIn_d,s));
     HIP_CHECK(hipMalloc((void **)&tOut_d, s));
 #ifdef BREAKDOWNS
-    e_alloc = std::chrono::high_resolution_clock::now();
-    s_h2d = std::chrono::high_resolution_clock::now();
+    e_alloc = std::chrono::steady_clock::now();
+    s_h2d = std::chrono::steady_clock::now();
 #endif
     HIP_CHECK(hipMemcpy(tIn_d, tIn, s, hipMemcpyHostToDevice));
     HIP_CHECK(hipMemcpy(p_d, p, s, hipMemcpyHostToDevice));
 #ifdef BREAKDOWNS
-    e_h2d = std::chrono::high_resolution_clock::now();
+    e_h2d = std::chrono::steady_clock::now();
 #endif
     HIP_CHECK(hipFuncSetCacheConfig(reinterpret_cast<const void*>(hotspotOpt1), hipFuncCachePreferL1));
 #ifdef BREAKDOWNS
-    s_compute = std::chrono::high_resolution_clock::now();
+    s_compute = std::chrono::steady_clock::now();
 #endif
     dim3 block_dim(64, 4, 1);
     dim3 grid_dim(nx / 64, ny / 4, 1);
@@ -139,19 +139,20 @@ void hotspot_opt1(float *p, float *tIn, float *tOut,
 #endif
     #ifdef BREAKDOWNS
     HIP_CHECK(hipDeviceSynchronize());
-    e_compute = std::chrono::high_resolution_clock::now();
-    s_d2h = std::chrono::high_resolution_clock::now();
+    e_compute = std::chrono::steady_clock::now();
+    s_d2h = std::chrono::steady_clock::now();
 #endif
-    HIP_CHECK(hipMemcpy(tOut, tOut_d, s, hipMemcpyDeviceToHost));
+    // After the last swap the newest field is in tIn_d (tOut_d holds step numiter-1).
+    HIP_CHECK(hipMemcpy(tOut, tIn_d, s, hipMemcpyDeviceToHost));
 #ifdef BREAKDOWNS
-    e_d2h = std::chrono::high_resolution_clock::now();
-    s_free = std::chrono::high_resolution_clock::now();
+    e_d2h = std::chrono::steady_clock::now();
+    s_free = std::chrono::steady_clock::now();
 #endif
     HIP_CHECK(hipFree(p_d));
     HIP_CHECK(hipFree(tIn_d));
     HIP_CHECK(hipFree(tOut_d));
 #ifdef BREAKDOWNS
-    e_free = std::chrono::high_resolution_clock::now();
+    e_free = std::chrono::steady_clock::now();
     g_hotspot3d_alloc_ms = std::chrono::duration<double, std::milli>(e_alloc - s_alloc).count();
     g_hotspot3d_h2d_ms = std::chrono::duration<double, std::milli>(e_h2d - s_h2d).count();
     g_hotspot3d_compute_ms = std::chrono::duration<double, std::milli>(e_compute - s_compute).count();

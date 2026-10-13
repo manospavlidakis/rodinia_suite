@@ -140,6 +140,7 @@ void rgbToComponents(T *d_r, T *d_g, T *d_b, unsigned char * src, int width, int
 
     /* Alloc d_src buffer */
     HIP_CHECK(hipMalloc((void **)&d_src, alignedSize));
+    hipCheckAsyncError("Cuda malloc")
     HIP_CHECK(hipMemset(d_src, 0, alignedSize));
 
     /* Copy data to device */
@@ -150,9 +151,11 @@ void rgbToComponents(T *d_r, T *d_g, T *d_b, unsigned char * src, int width, int
     dim3 grid(alignedSize/(THREADS*3));
     assert(alignedSize%(THREADS*3) == 0);
     c_CopySrcToComponents<<<grid, threads>>>(d_r, d_g, d_b, d_src, pixels);
+    hipCheckAsyncError("CopySrcToComponents kernel")
 
     /* Free Memory */
     HIP_CHECK(hipFree(d_src));
+    hipCheckAsyncError("Free memory")
 }
 template void rgbToComponents<float>(float *d_r, float *d_g, float *d_b, unsigned char * src, int width, int height);
 template void rgbToComponents<int>(int *d_r, int *d_g, int *d_b, unsigned char * src, int width, int height);
@@ -168,6 +171,7 @@ void bwToComponent(T *d_c, unsigned char * src, int width, int height)
 
     /* Alloc d_src buffer */
     HIP_CHECK(hipMalloc((void **)&d_src, alignedSize));
+    hipCheckAsyncError("Cuda malloc")
     HIP_CHECK(hipMemset(d_src, 0, alignedSize));
 
     /* Copy data to device */
@@ -178,9 +182,11 @@ void bwToComponent(T *d_c, unsigned char * src, int width, int height)
     dim3 grid(alignedSize/(THREADS));
     assert(alignedSize%(THREADS) == 0);
     c_CopySrcToComponent<<<grid, threads>>>(d_c, d_src, pixels);
+    hipCheckAsyncError("CopySrcToComponents kernel")
 
     /* Free Memory */
     HIP_CHECK(hipFree(d_src));
+    hipCheckAsyncError("Free memory")
 }
 
 template void bwToComponent<float>(float *d_c, unsigned char *src, int width, int height);

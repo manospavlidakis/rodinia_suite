@@ -19,10 +19,10 @@
 #define WARMUP
 #define INIT_TIME
 const int threads_per_block = 512;
-std::chrono::high_resolution_clock::time_point s_compute;
-std::chrono::high_resolution_clock::time_point e_compute;
-std::chrono::high_resolution_clock::time_point start_warmup;
-std::chrono::high_resolution_clock::time_point end_warmup;
+std::chrono::steady_clock::time_point s_compute;
+std::chrono::steady_clock::time_point e_compute;
+std::chrono::steady_clock::time_point start_warmup;
+std::chrono::steady_clock::time_point end_warmup;
 
 /**
 @var M value for Linear Congruential Generator (LCG); use GCC's value
@@ -813,8 +813,8 @@ particleFilter(unsigned char *I, int IszX, int IszY, int Nfr, int *seed,
 
 int main(int argc, char *argv[]) {
 
-  auto start = std::chrono::high_resolution_clock::now();
-  auto start_0 = std::chrono::high_resolution_clock::now();
+  auto start = std::chrono::steady_clock::now();
+  auto start_0 = std::chrono::steady_clock::now();
 
   std::string usage =
       "double.out -x <dimX> -y <dimY> -z <Nfr> -np <Nparticles>";
@@ -881,18 +881,18 @@ int main(int argc, char *argv[]) {
   int i;
   for (i = 0; i < Nparticles; i++)
     seed[i] = time(0) * i;
-  auto end_0 = std::chrono::high_resolution_clock::now();
+  auto end_0 = std::chrono::steady_clock::now();
 #ifdef WARMUP
-  start_warmup = std::chrono::high_resolution_clock::now();
+  start_warmup = std::chrono::steady_clock::now();
   // Warmup
   char *warm;
   HIP_CHECK(hipMalloc((void **)&warm, sizeof(char)));
   hipStream_t stream;
   HIP_CHECK(hipStreamCreateWithFlags(&stream, hipStreamNonBlocking));
   HIP_CHECK(hipFree(warm));
-  end_warmup = std::chrono::high_resolution_clock::now();
+  end_warmup = std::chrono::steady_clock::now();
 #endif
-  s_compute = std::chrono::high_resolution_clock::now();
+  s_compute = std::chrono::steady_clock::now();
   // malloc matrix
   unsigned char *I =
       (unsigned char *)calloc(IszX * IszY * Nfr, sizeof(unsigned char));
@@ -905,8 +905,8 @@ int main(int argc, char *argv[]) {
   double *weights = std::get<2>(result);
   double *arrayX = std::get<3>(result);
   double *arrayY = std::get<4>(result);
-  e_compute = std::chrono::high_resolution_clock::now();
-  auto end = std::chrono::high_resolution_clock::now();
+  e_compute = std::chrono::steady_clock::now();
+  auto end = std::chrono::steady_clock::now();
 #ifdef OUTPUT
   // Compute final object location
   xe = 0;

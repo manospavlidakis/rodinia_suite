@@ -10,22 +10,22 @@
 #include "define.c"
 
 #define WARMUP
-std::chrono::high_resolution_clock::time_point s_compute;
-std::chrono::high_resolution_clock::time_point e_compute;
-std::chrono::high_resolution_clock::time_point start_warmup;
-std::chrono::high_resolution_clock::time_point end_warmup;
+std::chrono::steady_clock::time_point s_compute;
+std::chrono::steady_clock::time_point e_compute;
+std::chrono::steady_clock::time_point start_warmup;
+std::chrono::steady_clock::time_point end_warmup;
 
 #ifdef BREAKDOWNS
-std::chrono::high_resolution_clock::time_point s_b0;
-std::chrono::high_resolution_clock::time_point e_b0;
-std::chrono::high_resolution_clock::time_point s_b1;
-std::chrono::high_resolution_clock::time_point e_b1;
-std::chrono::high_resolution_clock::time_point s_b2;
-std::chrono::high_resolution_clock::time_point e_b2;
-std::chrono::high_resolution_clock::time_point s_b3;
-std::chrono::high_resolution_clock::time_point e_b3;
-std::chrono::high_resolution_clock::time_point s_b4;
-std::chrono::high_resolution_clock::time_point e_b4;
+std::chrono::steady_clock::time_point s_b0;
+std::chrono::steady_clock::time_point e_b0;
+std::chrono::steady_clock::time_point s_b1;
+std::chrono::steady_clock::time_point e_b1;
+std::chrono::steady_clock::time_point s_b2;
+std::chrono::steady_clock::time_point e_b2;
+std::chrono::steady_clock::time_point s_b3;
+std::chrono::steady_clock::time_point e_b3;
+std::chrono::steady_clock::time_point s_b4;
+std::chrono::steady_clock::time_point e_b4;
 #endif
 
 params_common_change common_change;
@@ -84,7 +84,7 @@ void write_data(const char *filename, int frameNo, int frames_processed,
 }
 
 int main(int argc, char *argv[]) {
-  auto start_all = std::chrono::high_resolution_clock::now();
+  auto start_all = std::chrono::steady_clock::now();
   // printf("WG size of kernel = %d \n", NUMBER_THREADS);
 
   // CUDA kernel execution parameters
@@ -121,14 +121,14 @@ int main(int argc, char *argv[]) {
   common.frame_mem = sizeof(fp) * common.frame_elem;
 
 #ifdef WARMUP
-  start_warmup = std::chrono::high_resolution_clock::now();
+  start_warmup = std::chrono::steady_clock::now();
   // Warmup
   double *warm;
   cudaMalloc((void **)&warm, sizeof(double) * 100000);
   cudaStream_t stream;
   cudaStreamCreateWithFlags(&stream, cudaStreamNonBlocking);
   cudaFree(warm);
-  end_warmup = std::chrono::high_resolution_clock::now();
+  end_warmup = std::chrono::steady_clock::now();
 #endif
 
   frames_processed = atoi(argv[2]);
@@ -366,9 +366,9 @@ int main(int argc, char *argv[]) {
   blocks.x = common.allPoints; // define the number of blocks in the grid
   blocks.y = 1;
 
-  s_compute = std::chrono::high_resolution_clock::now();
+  s_compute = std::chrono::steady_clock::now();
 #ifdef BREAKDOWNS
-  s_b0 = std::chrono::high_resolution_clock::now();
+  s_b0 = std::chrono::steady_clock::now();
 #endif
   cudaMalloc((void **)&common_change.d_frame, common.frame_mem);
   cudaMalloc((void **)&common.d_endoRow, common.endo_mem);
@@ -438,8 +438,8 @@ int main(int argc, char *argv[]) {
   }
 #ifdef BREAKDOWNS
   cudaDeviceSynchronize();
-  e_b0 = std::chrono::high_resolution_clock::now();
-  s_b1 = std::chrono::high_resolution_clock::now();
+  e_b0 = std::chrono::steady_clock::now();
+  s_b1 = std::chrono::steady_clock::now();
 #endif
 
   cudaMemcpy(common.d_endoRow, common.endoRow, common.endo_mem, cudaMemcpyHostToDevice);
@@ -451,8 +451,8 @@ int main(int argc, char *argv[]) {
 
   #ifdef BREAKDOWNS
   cudaDeviceSynchronize();
-  e_b1 = std::chrono::high_resolution_clock::now();
-  s_b2 = std::chrono::high_resolution_clock::now();
+  e_b1 = std::chrono::steady_clock::now();
+  s_b2 = std::chrono::steady_clock::now();
 #endif
 
   for (common_change.frame_no = 0; common_change.frame_no < frames_processed;
@@ -481,8 +481,8 @@ int main(int argc, char *argv[]) {
   }
 #ifdef BREAKDOWNS
   cudaDeviceSynchronize();
-  e_b2 = std::chrono::high_resolution_clock::now();
-  s_b3 = std::chrono::high_resolution_clock::now();
+  e_b2 = std::chrono::steady_clock::now();
+  s_b3 = std::chrono::steady_clock::now();
 #endif
   cudaMemcpy(common.tEndoRowLoc, common.d_tEndoRowLoc,
              common.endo_mem * common.no_frames, cudaMemcpyDeviceToHost);
@@ -494,8 +494,8 @@ int main(int argc, char *argv[]) {
   cudaMemcpy(common.tEpiColLoc, common.d_tEpiColLoc,
              common.epi_mem * common.no_frames, cudaMemcpyDeviceToHost);
 #ifdef BREAKDOWNS
-  e_b3 = std::chrono::high_resolution_clock::now();
-  s_b4 = std::chrono::high_resolution_clock::now();
+  e_b3 = std::chrono::steady_clock::now();
+  s_b4 = std::chrono::steady_clock::now();
 #endif
   // frame
   cudaFree(common_change.d_frame);
@@ -528,8 +528,10 @@ int main(int argc, char *argv[]) {
   }
 #ifdef BREAKDOWNS
   cudaDeviceSynchronize();
-  e_b4 = std::chrono::high_resolution_clock::now();
+  e_b4 = std::chrono::steady_clock::now();
 #endif
+
+  e_compute = std::chrono::steady_clock::now();
 
 #ifdef WARMUP
   std::chrono::duration<double, std::milli> elapsed_milli_warmup = end_warmup - start_warmup;
@@ -537,7 +539,6 @@ int main(int argc, char *argv[]) {
   cudaStreamDestroy(stream);
 #endif
 
-  e_compute = std::chrono::high_resolution_clock::now();
   std::chrono::duration<double, std::milli> compute_milli = e_compute - s_compute;
   std::cerr << "Computation: " << compute_milli.count() << " ms" << std::endl;
 
@@ -554,7 +555,7 @@ int main(int argc, char *argv[]) {
   free(common.tEndoRowLoc);
   free(common.tEndoColLoc);
 
-  auto end_all = std::chrono::high_resolution_clock::now();
+  auto end_all = std::chrono::steady_clock::now();
   std::chrono::duration<double, std::milli> elapsed_milli = end_all - start_all;
   std::cerr << "Elapsed time: " << elapsed_milli.count() << " ms" << std::endl;
 

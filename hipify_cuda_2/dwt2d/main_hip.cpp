@@ -43,10 +43,10 @@
 #include <unistd.h>
 #include "../../common/helper_hip.h"
 #define WARMUP
-std::chrono::high_resolution_clock::time_point s_compute;
-std::chrono::high_resolution_clock::time_point e_compute;
-std::chrono::high_resolution_clock::time_point start_warmup;
-std::chrono::high_resolution_clock::time_point end_warmup;
+std::chrono::steady_clock::time_point s_compute;
+std::chrono::steady_clock::time_point e_compute;
+std::chrono::steady_clock::time_point start_warmup;
+std::chrono::steady_clock::time_point end_warmup;
 // #define OUTPUT
 struct dwt {
   char *srcFilename;
@@ -131,16 +131,16 @@ template <typename T>
 void processDWT(struct dwt *d, int forward, int writeVisual) {
   int componentSize = d->pixWidth * d->pixHeight * sizeof(T);
 #ifdef WARMUP
-  start_warmup = std::chrono::high_resolution_clock::now();
+  start_warmup = std::chrono::steady_clock::now();
   // Warmup
   double *warm;
   HIP_CHECK(hipMalloc((void **)&warm, sizeof(double) * 100000));
   hipStream_t stream;
   HIP_CHECK(hipStreamCreateWithFlags(&stream, hipStreamNonBlocking));
   HIP_CHECK(hipFree(warm));
-  end_warmup = std::chrono::high_resolution_clock::now();
+  end_warmup = std::chrono::steady_clock::now();
 #endif
-  s_compute = std::chrono::high_resolution_clock::now();
+  s_compute = std::chrono::steady_clock::now();
   T *c_r_out, *backup;
   HIP_CHECK(hipMalloc((void **)&c_r_out, componentSize));
   HIP_CHECK(hipMemset(c_r_out, 0, componentSize));
@@ -189,7 +189,7 @@ void processDWT(struct dwt *d, int forward, int writeVisual) {
     // }
     // -------test----------
     HIP_CHECK(hipDeviceSynchronize());
-    e_compute = std::chrono::high_resolution_clock::now();
+    e_compute = std::chrono::steady_clock::now();
     std::chrono::duration<double, std::milli> compute_milli =
         e_compute - s_compute;
     std::cerr << "Computation: " << compute_milli.count() << " ms" << std::endl;
@@ -255,7 +255,7 @@ void processDWT(struct dwt *d, int forward, int writeVisual) {
 }
 
 int main(int argc, char **argv) {
-  auto start_all = std::chrono::high_resolution_clock::now();
+  auto start_all = std::chrono::steady_clock::now();
   int optindex = 0;
   char ch;
   struct option longopts[] = {
@@ -429,7 +429,7 @@ int main(int argc, char **argv) {
   // writeComponent(g_cuda, componentSize, ".g");
   // writeComponent(b_wave_cuda, componentSize, ".b");
   HIP_CHECK(hipHostFree(d->srcImg));
-  auto end_all = std::chrono::high_resolution_clock::now();
+  auto end_all = std::chrono::steady_clock::now();
   std::chrono::duration<double, std::milli> elapsed_milli = end_all - start_all;
   std::cerr << "Elapsed time: " << elapsed_milli.count() << " ms" << std::endl;
   return 0;

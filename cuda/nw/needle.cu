@@ -10,24 +10,24 @@
 // includes, kernels
 #include "needle_kernel.cu"
 #define WARMUP
-std::chrono::high_resolution_clock::time_point s_compute;
-std::chrono::high_resolution_clock::time_point e_compute;
-std::chrono::high_resolution_clock::time_point start_warmup;
-std::chrono::high_resolution_clock::time_point end_warmup;
+std::chrono::steady_clock::time_point s_compute;
+std::chrono::steady_clock::time_point e_compute;
+std::chrono::steady_clock::time_point start_warmup;
+std::chrono::steady_clock::time_point end_warmup;
 
 // #define BREAKDOWNS
 
 #ifdef BREAKDOWNS
-std::chrono::high_resolution_clock::time_point s_b0;
-std::chrono::high_resolution_clock::time_point e_b0;
-std::chrono::high_resolution_clock::time_point s_b1;
-std::chrono::high_resolution_clock::time_point e_b1;
-std::chrono::high_resolution_clock::time_point s_b2;
-std::chrono::high_resolution_clock::time_point e_b2;
-std::chrono::high_resolution_clock::time_point s_b3;
-std::chrono::high_resolution_clock::time_point e_b3;
-std::chrono::high_resolution_clock::time_point s_b4;
-std::chrono::high_resolution_clock::time_point e_b4;
+std::chrono::steady_clock::time_point s_b0;
+std::chrono::steady_clock::time_point e_b0;
+std::chrono::steady_clock::time_point s_b1;
+std::chrono::steady_clock::time_point e_b1;
+std::chrono::steady_clock::time_point s_b2;
+std::chrono::steady_clock::time_point e_b2;
+std::chrono::steady_clock::time_point s_b3;
+std::chrono::steady_clock::time_point e_b3;
+std::chrono::steady_clock::time_point s_b4;
+std::chrono::steady_clock::time_point e_b4;
 #endif
 
 // declaration, forward
@@ -113,8 +113,8 @@ void usage(int argc, char **argv) {
 }
 
 void runTest(int argc, char **argv) {
-  auto start = std::chrono::high_resolution_clock::now();
-  auto start_0 = std::chrono::high_resolution_clock::now();
+  auto start = std::chrono::steady_clock::now();
+  auto start_0 = std::chrono::steady_clock::now();
   int max_rows, max_cols, penalty;
   int *input_itemsets, *output_itemsets, *referrence;
   int *matrix_cuda, *referrence_cuda;
@@ -178,20 +178,20 @@ void runTest(int argc, char **argv) {
     input_itemsets[j] = -j * penalty;
 
   size = max_cols * max_rows;
-  auto end_0 = std::chrono::high_resolution_clock::now();
+  auto end_0 = std::chrono::steady_clock::now();
 #ifdef WARMUP
-  start_warmup = std::chrono::high_resolution_clock::now();
+  start_warmup = std::chrono::steady_clock::now();
   // Warmup
   double *warm;
   cudaMalloc((void **)&warm, sizeof(double) * 100000);
   cudaStream_t stream;
   cudaStreamCreateWithFlags(&stream, cudaStreamNonBlocking);
   cudaFree(warm);
-  end_warmup = std::chrono::high_resolution_clock::now();
+  end_warmup = std::chrono::steady_clock::now();
 #endif
-  s_compute = std::chrono::high_resolution_clock::now();
+  s_compute = std::chrono::steady_clock::now();
 #ifdef BREAKDOWNS
-  s_b0 = std::chrono::high_resolution_clock::now();
+  s_b0 = std::chrono::steady_clock::now();
 #endif
 
   cudaMalloc((void **)&referrence_cuda, sizeof(int) * size);
@@ -199,8 +199,8 @@ void runTest(int argc, char **argv) {
 
 #ifdef BREAKDOWNS
   cudaDeviceSynchronize();
-  e_b0 = std::chrono::high_resolution_clock::now();
-  s_b2 = std::chrono::high_resolution_clock::now();
+  e_b0 = std::chrono::steady_clock::now();
+  s_b2 = std::chrono::steady_clock::now();
 #endif
 
   cudaMemcpy(referrence_cuda, referrence, sizeof(int) * size,
@@ -208,8 +208,8 @@ void runTest(int argc, char **argv) {
   cudaMemcpy(matrix_cuda, input_itemsets, sizeof(int) * size,
              cudaMemcpyHostToDevice);
 #ifdef BREAKDOWNS
-  e_b2 = std::chrono::high_resolution_clock::now();
-  s_b1 = std::chrono::high_resolution_clock::now();
+  e_b2 = std::chrono::steady_clock::now();
+  s_b1 = std::chrono::steady_clock::now();
 #endif
 
   dim3 dimGrid;
@@ -259,8 +259,8 @@ void runTest(int argc, char **argv) {
   }
 #ifdef BREAKDOWNS
   cudaDeviceSynchronize();
-  e_b1 = std::chrono::high_resolution_clock::now();
-  s_b3 = std::chrono::high_resolution_clock::now();
+  e_b1 = std::chrono::steady_clock::now();
+  s_b3 = std::chrono::steady_clock::now();
 #endif
 
   cudaMemcpy(output_itemsets, matrix_cuda, sizeof(int) * size,
@@ -271,18 +271,18 @@ void runTest(int argc, char **argv) {
   std::cerr << "size" << size << std::endl;
 */
 #ifdef BREAKDOWNS
-  e_b3 = std::chrono::high_resolution_clock::now();
-  s_b4 = std::chrono::high_resolution_clock::now();
+  e_b3 = std::chrono::steady_clock::now();
+  s_b4 = std::chrono::steady_clock::now();
 #endif
 
   // #define TRACEBACK
   cudaFree(referrence_cuda);
   cudaFree(matrix_cuda);
 #ifdef BREAKDOWNS
-  e_b4 = std::chrono::high_resolution_clock::now();
+  e_b4 = std::chrono::steady_clock::now();
 #endif
 
-  e_compute = std::chrono::high_resolution_clock::now();
+  e_compute = std::chrono::steady_clock::now();
 #ifdef OUTPUT
   FILE *fpo = fopen("result.txt", "w");
   fprintf(fpo, "print traceback value GPU:\n");
@@ -351,7 +351,7 @@ void runTest(int argc, char **argv) {
   free(input_itemsets);
   free(output_itemsets);
 
-  auto end = std::chrono::high_resolution_clock::now();
+  auto end = std::chrono::steady_clock::now();
   std::chrono::duration<double, std::milli> elapsed_milli_0 = end_0 - start_0;
   //std::cerr << "Init time: " << elapsed_milli_0.count() << " ms" << std::endl;
 #ifdef WARMUP

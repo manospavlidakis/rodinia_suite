@@ -40,23 +40,23 @@ cudaErrorCheckFatal_Runtime(cudaError_t err, const char *func, const char *file,
   }
 }
 
-std::chrono::high_resolution_clock::time_point s_compute;
-std::chrono::high_resolution_clock::time_point e_compute;
-std::chrono::high_resolution_clock::time_point start_warmup;
-std::chrono::high_resolution_clock::time_point end_warmup;
+std::chrono::steady_clock::time_point s_compute;
+std::chrono::steady_clock::time_point e_compute;
+std::chrono::steady_clock::time_point start_warmup;
+std::chrono::steady_clock::time_point end_warmup;
 #define DEBUG
 // #define BREAKDOWNS
 #ifdef BREAKDOWNS
-std::chrono::high_resolution_clock::time_point s_b0;
-std::chrono::high_resolution_clock::time_point e_b0;
-std::chrono::high_resolution_clock::time_point s_b1;
-std::chrono::high_resolution_clock::time_point e_b1;
-std::chrono::high_resolution_clock::time_point s_b2;
-std::chrono::high_resolution_clock::time_point e_b2;
-std::chrono::high_resolution_clock::time_point s_b3;
-std::chrono::high_resolution_clock::time_point e_b3;
-std::chrono::high_resolution_clock::time_point s_b4;
-std::chrono::high_resolution_clock::time_point e_b4;
+std::chrono::steady_clock::time_point s_b0;
+std::chrono::steady_clock::time_point e_b0;
+std::chrono::steady_clock::time_point s_b1;
+std::chrono::steady_clock::time_point e_b1;
+std::chrono::steady_clock::time_point s_b2;
+std::chrono::steady_clock::time_point e_b2;
+std::chrono::steady_clock::time_point s_b3;
+std::chrono::steady_clock::time_point e_b3;
+std::chrono::steady_clock::time_point s_b4;
+std::chrono::steady_clock::time_point e_b4;
 #endif
 
 #ifdef RD_WG_SIZE_0_0
@@ -124,8 +124,8 @@ void create_matrix(float *m, int size) {
 }
 
 int main(int argc, char *argv[]) {
-  auto start = std::chrono::high_resolution_clock::now();
-  auto start_0 = std::chrono::high_resolution_clock::now();
+  auto start = std::chrono::steady_clock::now();
+  auto start_0 = std::chrono::steady_clock::now();
 
   int i, j;
   char flag;
@@ -190,20 +190,20 @@ int main(int argc, char *argv[]) {
   finalVec = (float *)malloc(Size * sizeof(float));
   // InitProblemOnce(filename);
   InitPerRun();
-  auto end_0 = std::chrono::high_resolution_clock::now();
+  auto end_0 = std::chrono::steady_clock::now();
 
 #ifdef WARMUP
-  start_warmup = std::chrono::high_resolution_clock::now();
+  start_warmup = std::chrono::steady_clock::now();
   // Warmup
   double *warm;
   cudaMalloc((void **)&warm, sizeof(double) * 1000000);
   cudaStream_t stream;
   cudaStreamCreateWithFlags(&stream, cudaStreamNonBlocking);
   cudaFree(warm);
-  end_warmup = std::chrono::high_resolution_clock::now();
+  end_warmup = std::chrono::steady_clock::now();
 #endif
 
-  s_compute = std::chrono::high_resolution_clock::now();
+  s_compute = std::chrono::steady_clock::now();
   // run kernels
   ForwardSub();
 
@@ -220,7 +220,7 @@ int main(int argc, char *argv[]) {
 
   BackSub();
 
-  e_compute = std::chrono::high_resolution_clock::now();
+  e_compute = std::chrono::steady_clock::now();
 #ifdef OUTPUT
   // printf("The final solution is: \n");
   PrintAry(finalVec, Size);
@@ -230,7 +230,7 @@ int main(int argc, char *argv[]) {
   free(a);
   free(b);
   free(finalVec);
-  auto end = std::chrono::high_resolution_clock::now();
+  auto end = std::chrono::steady_clock::now();
   std::chrono::duration<double, std::milli> elapsed_milli_0 = end_0 - start_0;
   //std::cerr << "Init time: " << elapsed_milli_0.count() << " ms" << std::endl;
 
@@ -433,7 +433,7 @@ void ForwardSub() {
   int t;
   float *m_cuda, *a_cuda, *b_cuda;
 #ifdef BREAKDOWNS
-  s_b0 = std::chrono::high_resolution_clock::now();
+  s_b0 = std::chrono::steady_clock::now();
 #endif
 
   // allocate memory on GPU
@@ -443,8 +443,8 @@ void ForwardSub() {
 
 #ifdef BREAKDOWNS
   cudaDeviceSynchronize();
-  e_b0 = std::chrono::high_resolution_clock::now();
-  s_b2 = std::chrono::high_resolution_clock::now();
+  e_b0 = std::chrono::steady_clock::now();
+  s_b2 = std::chrono::steady_clock::now();
 #endif
 
   // copy memory to GPU
@@ -456,11 +456,11 @@ void ForwardSub() {
       cudaMemcpy(b_cuda, b, Size * sizeof(float), cudaMemcpyHostToDevice));
 
 #ifdef BREAKDOWNS
-  e_b2 = std::chrono::high_resolution_clock::now();
+  e_b2 = std::chrono::steady_clock::now();
   // double data_size = (2 * (Size * Size * sizeof(float))) + Size * sizeof(float);
   // std::cerr << std::fixed << " Data size: " << data_size / 1024 / 1024 << " MB"
   //           << std::endl;
-  s_b1 = std::chrono::high_resolution_clock::now();
+  s_b1 = std::chrono::steady_clock::now();
 #endif
 
   int block_size, grid_size;
@@ -488,8 +488,8 @@ void ForwardSub() {
   CUDA_ERROR_FATAL_RUNTIME(cudaDeviceSynchronize());
 
 #ifdef BREAKDOWNS
-  e_b1 = std::chrono::high_resolution_clock::now();
-  s_b3 = std::chrono::high_resolution_clock::now();
+  e_b1 = std::chrono::steady_clock::now();
+  s_b3 = std::chrono::steady_clock::now();
 #endif
 
   // copy memory back to CPU
@@ -501,8 +501,8 @@ void ForwardSub() {
                                       cudaMemcpyDeviceToHost));
 
 #ifdef BREAKDOWNS
-  e_b3 = std::chrono::high_resolution_clock::now();
-  s_b4 = std::chrono::high_resolution_clock::now();
+  e_b3 = std::chrono::steady_clock::now();
+  s_b4 = std::chrono::steady_clock::now();
 #endif
 
   cudaFree(m_cuda);
@@ -510,7 +510,7 @@ void ForwardSub() {
   cudaFree(b_cuda);
 
 #ifdef BREAKDOWNS
-  e_b4 = std::chrono::high_resolution_clock::now();
+  e_b4 = std::chrono::steady_clock::now();
 #endif
 
 }
@@ -583,7 +583,7 @@ void PrintAry(float *ary, int ary_size) {
 
   int i;
   for (i = 0; i < ary_size; i++) {
-    fprintf(fpo, "%.2f", ary[i]);
+    fprintf(fpo, "%.8e\n", ary[i]); // full precision, one value per line
   }
   fclose(fpo);
 }

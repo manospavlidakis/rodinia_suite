@@ -4,16 +4,16 @@
 #endif
 
 #ifdef BREAKDOWNS
-static std::chrono::high_resolution_clock::time_point s_b0;
-static std::chrono::high_resolution_clock::time_point e_b0;
-static std::chrono::high_resolution_clock::time_point s_b1;
-static std::chrono::high_resolution_clock::time_point e_b1;
-static std::chrono::high_resolution_clock::time_point s_b2;
-static std::chrono::high_resolution_clock::time_point e_b2;
-static std::chrono::high_resolution_clock::time_point s_b3;
-static std::chrono::high_resolution_clock::time_point e_b3;
-static std::chrono::high_resolution_clock::time_point s_b4;
-static std::chrono::high_resolution_clock::time_point e_b4;
+static std::chrono::steady_clock::time_point s_b0;
+static std::chrono::steady_clock::time_point e_b0;
+static std::chrono::steady_clock::time_point s_b1;
+static std::chrono::steady_clock::time_point e_b1;
+static std::chrono::steady_clock::time_point s_b2;
+static std::chrono::steady_clock::time_point e_b2;
+static std::chrono::steady_clock::time_point s_b3;
+static std::chrono::steady_clock::time_point e_b3;
+static std::chrono::steady_clock::time_point s_b4;
+static std::chrono::steady_clock::time_point e_b4;
 extern "C" {
 double g_btree2_alloc_ms   = 0.0;
 double g_btree2_h2d_ms     = 0.0;
@@ -97,7 +97,7 @@ void kernel_gpu_cuda_wrapper_2(knode *knodes, long knodes_elem, long knodes_mem,
   threadsPerBlock = order < 1024 ? order : 1024;
 
 #ifdef BREAKDOWNS
-  s_b0 = std::chrono::high_resolution_clock::now();
+  s_b0 = std::chrono::steady_clock::now();
 #endif
 
   knode *knodesD;
@@ -121,8 +121,8 @@ void kernel_gpu_cuda_wrapper_2(knode *knodes, long knodes_elem, long knodes_mem,
 
 #ifdef BREAKDOWNS
   HIP_CHECK(hipDeviceSynchronize());
-  e_b0 = std::chrono::high_resolution_clock::now();
-  s_b2 = std::chrono::high_resolution_clock::now();
+  e_b0 = std::chrono::steady_clock::now();
+  s_b2 = std::chrono::steady_clock::now();
 #endif
 
   HIP_CHECK(hipMemcpy(knodesD, knodes, knodes_mem, hipMemcpyHostToDevice));
@@ -136,8 +136,8 @@ void kernel_gpu_cuda_wrapper_2(knode *knodes, long knodes_elem, long knodes_mem,
   HIP_CHECK(hipMemcpy(ansDLength, reclength, count * sizeof(int), hipMemcpyHostToDevice));
 
 #ifdef BREAKDOWNS
-  e_b2 = std::chrono::high_resolution_clock::now();
-  s_b1 = std::chrono::high_resolution_clock::now();
+  e_b2 = std::chrono::steady_clock::now();
+  s_b1 = std::chrono::steady_clock::now();
 #endif
 
   // [GPU] findRangeK kernel
@@ -146,16 +146,16 @@ void kernel_gpu_cuda_wrapper_2(knode *knodes, long knodes_elem, long knodes_mem,
   HIP_CHECK(hipDeviceSynchronize());
 
 #ifdef BREAKDOWNS
-  e_b1 = std::chrono::high_resolution_clock::now();
-  s_b3 = std::chrono::high_resolution_clock::now();
+  e_b1 = std::chrono::steady_clock::now();
+  s_b3 = std::chrono::steady_clock::now();
 #endif
 
   HIP_CHECK(hipMemcpy(recstart, ansDStart, count * sizeof(int), hipMemcpyDeviceToHost));
   HIP_CHECK(hipMemcpy(reclength, ansDLength, count * sizeof(int), hipMemcpyDeviceToHost));
 
 #ifdef BREAKDOWNS
-  e_b3 = std::chrono::high_resolution_clock::now();
-  s_b4 = std::chrono::high_resolution_clock::now();
+  e_b3 = std::chrono::steady_clock::now();
+  s_b4 = std::chrono::steady_clock::now();
 #endif
 
   HIP_CHECK(hipFree(knodesD));
@@ -169,7 +169,7 @@ void kernel_gpu_cuda_wrapper_2(knode *knodes, long knodes_elem, long knodes_mem,
   HIP_CHECK(hipFree(ansDLength));
 
 #ifdef BREAKDOWNS
-  e_b4 = std::chrono::high_resolution_clock::now();
+  e_b4 = std::chrono::steady_clock::now();
   g_btree2_alloc_ms   = std::chrono::duration<double, std::milli>(e_b0 - s_b0).count();
   g_btree2_h2d_ms     = std::chrono::duration<double, std::milli>(e_b2 - s_b2).count();
   g_btree2_compute_ms = std::chrono::duration<double, std::milli>(e_b1 - s_b1).count();

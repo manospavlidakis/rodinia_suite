@@ -14,22 +14,22 @@
 #else
 #define BLOCK_SIZE 16
 #endif
-std::chrono::high_resolution_clock::time_point s_compute;
-std::chrono::high_resolution_clock::time_point e_compute;
-std::chrono::high_resolution_clock::time_point start_warmup;
-std::chrono::high_resolution_clock::time_point end_warmup;
+std::chrono::steady_clock::time_point s_compute;
+std::chrono::steady_clock::time_point e_compute;
+std::chrono::steady_clock::time_point start_warmup;
+std::chrono::steady_clock::time_point end_warmup;
 
 #ifdef BREAKDOWNS
-std::chrono::high_resolution_clock::time_point s_b0;
-std::chrono::high_resolution_clock::time_point e_b0;
-std::chrono::high_resolution_clock::time_point s_b1;
-std::chrono::high_resolution_clock::time_point e_b1;
-std::chrono::high_resolution_clock::time_point s_b2;
-std::chrono::high_resolution_clock::time_point e_b2;
-std::chrono::high_resolution_clock::time_point s_b3;
-std::chrono::high_resolution_clock::time_point e_b3;
-std::chrono::high_resolution_clock::time_point s_b4;
-std::chrono::high_resolution_clock::time_point e_b4;
+std::chrono::steady_clock::time_point s_b0;
+std::chrono::steady_clock::time_point e_b0;
+std::chrono::steady_clock::time_point s_b1;
+std::chrono::steady_clock::time_point e_b1;
+std::chrono::steady_clock::time_point s_b2;
+std::chrono::steady_clock::time_point e_b2;
+std::chrono::steady_clock::time_point s_b3;
+std::chrono::steady_clock::time_point e_b3;
+std::chrono::steady_clock::time_point s_b4;
+std::chrono::steady_clock::time_point e_b4;
 #endif
 
 #define STR_SIZE 256
@@ -294,8 +294,8 @@ int main(int argc, char **argv) {
 }
 
 void run(int argc, char **argv) {
-  auto start = std::chrono::high_resolution_clock::now();
-  auto start_0 = std::chrono::high_resolution_clock::now();
+  auto start = std::chrono::steady_clock::now();
+  auto start_0 = std::chrono::steady_clock::now();
   int size;
   int grid_rows, grid_cols;
   float *FilesavingTemp, *FilesavingPower, *MatrixOut;
@@ -326,6 +326,13 @@ void run(int argc, char **argv) {
       grid_cols / smallBlockCol + ((grid_cols % smallBlockCol == 0) ? 0 : 1);
   int blockRows =
       grid_rows / smallBlockRow + ((grid_rows % smallBlockRow == 0) ? 0 : 1);
+  if (smallBlockCol <= 0 || smallBlockRow <= 0) {
+    // pyramid_height * EXPAND_RATE >= BLOCK_SIZE: no thread would compute
+    // anything and the output would just be the input temperatures.
+    fprintf(stderr, "ERROR: pyramid_height %d too large (max %d)\n",
+            pyramid_height, (BLOCK_SIZE - 1) / EXPAND_RATE);
+    exit(1);
+  }
 
   FilesavingTemp = (float *)malloc(size * sizeof(float));
   FilesavingPower = (float *)malloc(size * sizeof(float));
@@ -336,29 +343,29 @@ void run(int argc, char **argv) {
 
   readinput(FilesavingTemp, grid_rows, grid_cols, tfile);
   readinput(FilesavingPower, grid_rows, grid_cols, pfile);
-  auto end_0 = std::chrono::high_resolution_clock::now();
+  auto end_0 = std::chrono::steady_clock::now();
 #ifdef WARMUP
-  start_warmup = std::chrono::high_resolution_clock::now();
+  start_warmup = std::chrono::steady_clock::now();
   // Warmup
   double *warm;
   cudaMalloc((void **)&warm, sizeof(double) * 100000);
   cudaStream_t stream;
   cudaStreamCreateWithFlags(&stream, cudaStreamNonBlocking);
   cudaFree(warm);
-  end_warmup = std::chrono::high_resolution_clock::now();
+  end_warmup = std::chrono::steady_clock::now();
 #endif
-  s_compute = std::chrono::high_resolution_clock::now();
+  s_compute = std::chrono::steady_clock::now();
   float *MatrixTemp[2], *MatrixPower;
 #ifdef BREAKDOWNS
-  s_b0 = std::chrono::high_resolution_clock::now();
+  s_b0 = std::chrono::steady_clock::now();
 #endif
   cudaMalloc((void **)&MatrixTemp[0], sizeof(float) * size); // FilesavingTemp
   cudaMalloc((void **)&MatrixTemp[1], sizeof(float) * size);
   cudaMalloc((void **)&MatrixPower, sizeof(float) * size); // FilesavingPower
 #ifdef BREAKDOWNS
   cudaDeviceSynchronize();
-  e_b0 = std::chrono::high_resolution_clock::now();
-  s_b2 = std::chrono::high_resolution_clock::now();
+  e_b0 = std::chrono::steady_clock::now();
+  s_b2 = std::chrono::steady_clock::now();
 #endif
   cudaMemcpy(MatrixTemp[0], FilesavingTemp, sizeof(float) * size,
              cudaMemcpyHostToDevice);
@@ -366,33 +373,33 @@ void run(int argc, char **argv) {
   cudaMemcpy(MatrixPower, FilesavingPower, sizeof(float) * size,
              cudaMemcpyHostToDevice);
 #ifdef BREAKDOWNS
-  e_b2 = std::chrono::high_resolution_clock::now();
-  s_b1 = std::chrono::high_resolution_clock::now();
+  e_b2 = std::chrono::steady_clock::now();
+  s_b1 = std::chrono::steady_clock::now();
 #endif
   int ret = compute_tran_temp(MatrixPower, MatrixTemp, grid_cols, grid_rows,
                               total_iterations, pyramid_height, blockCols,
                               blockRows, borderCols, borderRows);
 #ifdef BREAKDOWNS
   cudaDeviceSynchronize();
-  e_b1 = std::chrono::high_resolution_clock::now();
-  s_b3 = std::chrono::high_resolution_clock::now();
+  e_b1 = std::chrono::steady_clock::now();
+  s_b3 = std::chrono::steady_clock::now();
 #endif
   cudaMemcpy(MatrixOut, MatrixTemp[ret], sizeof(float) * size,
              cudaMemcpyDeviceToHost);
 #ifdef BREAKDOWNS
-  e_b3 = std::chrono::high_resolution_clock::now();
-  s_b4 = std::chrono::high_resolution_clock::now();
+  e_b3 = std::chrono::steady_clock::now();
+  s_b4 = std::chrono::steady_clock::now();
 #endif
   cudaFree(MatrixPower);
   cudaFree(MatrixTemp[0]);
   cudaFree(MatrixTemp[1]);
 #ifdef BREAKDOWNS
-  e_b4 = std::chrono::high_resolution_clock::now();
+  e_b4 = std::chrono::steady_clock::now();
 #endif
 
-  e_compute = std::chrono::high_resolution_clock::now();
+  e_compute = std::chrono::steady_clock::now();
 
-  auto end = std::chrono::high_resolution_clock::now();
+  auto end = std::chrono::steady_clock::now();
   std::chrono::duration<double, std::milli> elapsed_milli_0 = end_0 - start_0;
   //std::cerr << "Init time: " << elapsed_milli_0.count() << " ms" << std::endl;
 #ifdef WARMUP

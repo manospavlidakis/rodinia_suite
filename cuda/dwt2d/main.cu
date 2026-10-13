@@ -40,10 +40,10 @@
 #include <sys/time.h>
 #include <unistd.h>
 #define WARMUP
-std::chrono::high_resolution_clock::time_point s_compute;
-std::chrono::high_resolution_clock::time_point e_compute;
-std::chrono::high_resolution_clock::time_point start_warmup;
-std::chrono::high_resolution_clock::time_point end_warmup;
+std::chrono::steady_clock::time_point s_compute;
+std::chrono::steady_clock::time_point e_compute;
+std::chrono::steady_clock::time_point start_warmup;
+std::chrono::steady_clock::time_point end_warmup;
 // #define OUTPUT
 struct dwt {
   char *srcFilename;
@@ -128,16 +128,16 @@ template <typename T>
 void processDWT(struct dwt *d, int forward, int writeVisual) {
   int componentSize = d->pixWidth * d->pixHeight * sizeof(T);
 #ifdef WARMUP
-  start_warmup = std::chrono::high_resolution_clock::now();
+  start_warmup = std::chrono::steady_clock::now();
   // Warmup
   double *warm;
   cudaMalloc((void **)&warm, sizeof(double) * 100000);
   cudaStream_t stream;
   cudaStreamCreateWithFlags(&stream, cudaStreamNonBlocking);
   cudaFree(warm);
-  end_warmup = std::chrono::high_resolution_clock::now();
+  end_warmup = std::chrono::steady_clock::now();
 #endif
-  s_compute = std::chrono::high_resolution_clock::now();
+  s_compute = std::chrono::steady_clock::now();
   T *c_r_out, *backup;
   cudaMalloc((void **)&c_r_out, componentSize); //< aligned component size
   cudaCheckError("Alloc device memory");
@@ -199,7 +199,7 @@ void processDWT(struct dwt *d, int forward, int writeVisual) {
     // }
     // -------test----------
     cudaDeviceSynchronize();
-    e_compute = std::chrono::high_resolution_clock::now();
+    e_compute = std::chrono::steady_clock::now();
 #ifdef WARMUP
     std::chrono::duration<double, std::milli> elapsed_milli_warmup = end_warmup - start_warmup;
     std::cerr << "Warmup time: " << elapsed_milli_warmup.count() << " ms" << std::endl;
@@ -271,7 +271,7 @@ void processDWT(struct dwt *d, int forward, int writeVisual) {
 }
 
 int main(int argc, char **argv) {
-  auto start_all = std::chrono::high_resolution_clock::now();
+  auto start_all = std::chrono::steady_clock::now();
   int optindex = 0;
   char ch;
   struct option longopts[] = {
@@ -451,7 +451,7 @@ int main(int argc, char **argv) {
   // writeComponent(b_wave_cuda, componentSize, ".b");
   cudaFreeHost(d->srcImg);
   cudaCheckError("Cuda free host");
-  auto end_all = std::chrono::high_resolution_clock::now();
+  auto end_all = std::chrono::steady_clock::now();
   std::chrono::duration<double, std::milli> elapsed_milli = end_all - start_all;
   std::cerr << "Elapsed time: " << elapsed_milli.count() << " ms" << std::endl;
   return 0;

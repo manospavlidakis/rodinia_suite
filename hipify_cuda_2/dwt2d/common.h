@@ -45,4 +45,19 @@
 //divide and round up macro
 #define DIVANDRND(a, b) ((((a) % (b)) != 0) ? ((a) / (b) + 1) : ((a) / (b)))
 
+// Same semantics as cudaCheckError/cudaCheckAsyncError in cuda/dwt2d/common.h,
+// so both versions synchronize at the same points inside the timed region.
+#  define hipCheckError( msg ) {                                             \
+    hipError_t err = hipGetLastError();                                      \
+    if( hipSuccess != err) {                                                 \
+        fprintf(stderr, "%s: %i: %s: %s.\n",                                 \
+                __FILE__, __LINE__, msg, hipGetErrorString( err) );          \
+        exit(-1);                                                            \
+    } }
+
+#  define hipCheckAsyncError( msg ) {                                        \
+    (void)hipDeviceSynchronize();                                            \
+    hipCheckError( msg );                                                    \
+    }
+
 #endif

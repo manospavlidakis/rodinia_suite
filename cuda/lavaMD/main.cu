@@ -8,10 +8,10 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
-std::chrono::high_resolution_clock::time_point s_compute;
-std::chrono::high_resolution_clock::time_point e_compute;
-std::chrono::high_resolution_clock::time_point start_warmup;
-std::chrono::high_resolution_clock::time_point end_warmup;
+std::chrono::steady_clock::time_point s_compute;
+std::chrono::steady_clock::time_point e_compute;
+std::chrono::steady_clock::time_point start_warmup;
+std::chrono::steady_clock::time_point end_warmup;
 #define WARMUP
 int isInteger(char *str) {
 
@@ -31,8 +31,8 @@ int isInteger(char *str) {
 }
 int main(int argc, char *argv[]) {
 
-  auto start = std::chrono::high_resolution_clock::now();
-  auto start_0 = std::chrono::high_resolution_clock::now();
+  auto start = std::chrono::steady_clock::now();
+  auto start_0 = std::chrono::steady_clock::now();
   // counters
   int i, j, k, l, m, n;
 
@@ -186,22 +186,22 @@ int main(int argc, char *argv[]) {
     fv_cpu[i].y = 0;
     fv_cpu[i].z = 0;
   }
-  auto end_0 = std::chrono::high_resolution_clock::now();
+  auto end_0 = std::chrono::steady_clock::now();
 #ifdef WARMUP
-  start_warmup = std::chrono::high_resolution_clock::now();
+  start_warmup = std::chrono::steady_clock::now();
   double *warm;
   cudaMalloc((void **)&warm, sizeof(double) * 100000);
   cudaStream_t stream;
   cudaStreamCreateWithFlags(&stream, cudaStreamNonBlocking);
   cudaFree(warm);
-  end_warmup = std::chrono::high_resolution_clock::now();
+  end_warmup = std::chrono::steady_clock::now();
 #endif
-  s_compute = std::chrono::high_resolution_clock::now();
+  s_compute = std::chrono::steady_clock::now();
 
   kernel_gpu_cuda_wrapper(par_cpu, dim_cpu, box_cpu, rv_cpu, qv_cpu, fv_cpu);
 
   // dump results
-  e_compute = std::chrono::high_resolution_clock::now();
+  e_compute = std::chrono::steady_clock::now();
 #ifdef OUTPUT
   FILE *fptr;
   fptr = fopen("result.txt", "w");
@@ -217,7 +217,7 @@ int main(int argc, char *argv[]) {
   free(fv_cpu);
   free(box_cpu);
 
-  auto end = std::chrono::high_resolution_clock::now();
+  auto end = std::chrono::steady_clock::now();
   std::chrono::duration<double, std::milli> elapsed_milli_0 = end_0 - start_0;
   //std::cerr << "Init time: " << elapsed_milli_0.count() << " ms" << std::endl;
 #ifdef WARMUP

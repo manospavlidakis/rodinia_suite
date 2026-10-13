@@ -29,10 +29,10 @@
 #include <sys/time.h>
 #include "../../common/helper_hip.h"
 #define WARMUP
-std::chrono::high_resolution_clock::time_point s_compute;
-std::chrono::high_resolution_clock::time_point e_compute;
-std::chrono::high_resolution_clock::time_point start_warmup;
-std::chrono::high_resolution_clock::time_point end_warmup;
+std::chrono::steady_clock::time_point s_compute;
+std::chrono::steady_clock::time_point e_compute;
+std::chrono::steady_clock::time_point start_warmup;
+std::chrono::steady_clock::time_point end_warmup;
 
 #ifdef BREAKDOWNS
 double g_huffman_alloc_ms = 0.0;
@@ -50,7 +50,7 @@ extern "C" void cpu_vlc_encode(unsigned int *indata, unsigned int num_elements,
                                unsigned int *codewordlens);
 
 int main(int argc, char *argv[]) {
-  auto start = std::chrono::high_resolution_clock::now();
+  auto start = std::chrono::steady_clock::now();
   if (!InitCUDA()) {
     return 0;
   }
@@ -63,7 +63,7 @@ int main(int argc, char *argv[]) {
     runVLCTest(NULL, num_block_threads, 1024);
   }
   HIP_CHECK(hipDeviceReset());
-  auto end = std::chrono::high_resolution_clock::now();
+  auto end = std::chrono::steady_clock::now();
   std::chrono::duration<double, std::milli> elapsed_milli = end - start;
   std::cerr << "Elapsed time: " << elapsed_milli.count() << " ms" << std::endl;
   return 0;
@@ -72,14 +72,14 @@ int main(int argc, char *argv[]) {
 void runVLCTest(char *file_name, uint num_block_threads, uint num_blocks) {
   // printf("CUDA! Starting VLC Tests!\n");
 #ifdef WARMUP
-  start_warmup = std::chrono::high_resolution_clock::now();
+  start_warmup = std::chrono::steady_clock::now();
   // Warmup
   double *warm;
   HIP_CHECK(hipMalloc((void **)&warm, sizeof(double) * 100000));
   hipStream_t stream;
   HIP_CHECK(hipStreamCreateWithFlags(&stream, hipStreamNonBlocking));
   HIP_CHECK(hipFree(warm));
-  end_warmup = std::chrono::high_resolution_clock::now();
+  end_warmup = std::chrono::steady_clock::now();
 #endif
   unsigned int num_elements;      // uint num_elements = num_blocks * num_block_threads;
   unsigned int mem_size; // uint mem_size = num_elements * sizeof(int);
@@ -117,7 +117,7 @@ void runVLCTest(char *file_name, uint num_block_threads, uint num_blocks) {
   unsigned int *d_codewords, *d_codewordlens;
   unsigned int *d_cw32, *d_cw32len, *d_cw32idx, *d_cindex, *d_cindex2;
 #ifdef BREAKDOWNS
-  auto s_alloc = std::chrono::high_resolution_clock::now();
+  auto s_alloc = std::chrono::steady_clock::now();
   auto e_alloc = s_alloc;
   auto s_h2d = s_alloc;
   auto e_h2d = s_alloc;
@@ -128,10 +128,10 @@ void runVLCTest(char *file_name, uint num_block_threads, uint num_blocks) {
   auto s_free = s_alloc;
   auto e_free = s_alloc;
 
-  s_alloc = std::chrono::high_resolution_clock::now();
+  s_alloc = std::chrono::steady_clock::now();
 #endif
 
-  s_compute = std::chrono::high_resolution_clock::now();
+  s_compute = std::chrono::steady_clock::now();
 
   HIP_CHECK(hipMalloc((void **)&d_sourceData, mem_size));
   HIP_CHECK(hipMalloc((void **)&d_destData, mem_size));
@@ -148,8 +148,8 @@ void runVLCTest(char *file_name, uint num_block_threads, uint num_blocks) {
   HIP_CHECK(hipMalloc((void **)&d_cindex2, num_blocks * sizeof(unsigned int)));
 
 #ifdef BREAKDOWNS
-  e_alloc = std::chrono::high_resolution_clock::now();
-  s_h2d = std::chrono::high_resolution_clock::now();
+  e_alloc = std::chrono::steady_clock::now();
+  s_h2d = std::chrono::steady_clock::now();
 #endif
 
   HIP_CHECK(hipMemcpy(d_sourceData, sourceData, mem_size, hipMemcpyHostToDevice));
@@ -162,7 +162,7 @@ void runVLCTest(char *file_name, uint num_block_threads, uint num_blocks) {
   HIP_CHECK(hipMemcpy(d_destData, destData, mem_size, hipMemcpyHostToDevice));
 
 #ifdef BREAKDOWNS
-  e_h2d = std::chrono::high_resolution_clock::now();
+  e_h2d = std::chrono::steady_clock::now();
 #endif
 
   dim3 grid_size(num_blocks, 1, 1);
@@ -180,7 +180,7 @@ void runVLCTest(char *file_name, uint num_block_threads, uint num_blocks) {
 #endif
 
 #ifdef BREAKDOWNS
-  s_b_compute = std::chrono::high_resolution_clock::now();
+  s_b_compute = std::chrono::steady_clock::now();
 #endif
 
   for (int i = 0; i < NT; i++) {
@@ -191,15 +191,15 @@ void runVLCTest(char *file_name, uint num_block_threads, uint num_blocks) {
   HIP_CHECK(hipDeviceSynchronize());
 
 #ifdef BREAKDOWNS
-  e_b_compute = std::chrono::high_resolution_clock::now();
-  s_d2h = std::chrono::high_resolution_clock::now();
+  e_b_compute = std::chrono::steady_clock::now();
+  s_d2h = std::chrono::steady_clock::now();
 #endif
 
   HIP_CHECK(hipMemcpy(destData, d_destData, mem_size, hipMemcpyDeviceToHost));
 
 #ifdef BREAKDOWNS
-  e_d2h = std::chrono::high_resolution_clock::now();
-  s_free = std::chrono::high_resolution_clock::now();
+  e_d2h = std::chrono::steady_clock::now();
+  s_free = std::chrono::steady_clock::now();
 #endif
 
   HIP_CHECK(hipFree(d_sourceData));
@@ -214,10 +214,10 @@ void runVLCTest(char *file_name, uint num_block_threads, uint num_blocks) {
   HIP_CHECK(hipFree(d_cindex2));
 
 #ifdef BREAKDOWNS
-  e_free = std::chrono::high_resolution_clock::now();
+  e_free = std::chrono::steady_clock::now();
 #endif
 
-  e_compute = std::chrono::high_resolution_clock::now();
+  e_compute = std::chrono::steady_clock::now();
 
 #ifdef WARMUP
   std::chrono::duration<double, std::milli> elapsed_milli_warmup =

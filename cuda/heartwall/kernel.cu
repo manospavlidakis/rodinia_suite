@@ -574,6 +574,9 @@ __global__ void kernel() {
       ei_new = ei_new + NUMBER_THREADS;
     }
 
+    // all subtractions must land before the row cumsum reads them (as in the first pass)
+    __syncthreads();
+
     // work
     ei_new = tx;
     while (ei_new < d_common.in2_sub_cumh_rows) {

@@ -130,7 +130,7 @@ int writeLinear(T *component_cuda, int pixWidth, int pixHeight,
     int samplesNum = pixWidth*pixHeight;
 
     size = samplesNum*sizeof(T);
-    HIP_CHECK(hipMalloc((void **)&gpu_output, size));
+    HIP_CHECK(hipHostMalloc((void **)&gpu_output, size, hipHostMallocDefault)); // host staging buffer (cudaMallocHost in CUDA)
     memset(gpu_output, 0, size);
     result = (unsigned char *)malloc(samplesNum);
     HIP_CHECK(hipMemcpy(gpu_output, component_cuda, size, hipMemcpyDeviceToHost));
@@ -219,7 +219,7 @@ int writeNStage2DDWT(T *component_cuda, int pixWidth, int pixHeight,
 #endif
 
     size = samplesNum*sizeof(T);
-    HIP_CHECK(hipMalloc((void **)&src, size));
+    HIP_CHECK(hipHostMalloc((void **)&src, size, hipHostMallocDefault)); // host staging buffer (cudaMallocHost in CUDA)
     dst = (T*)malloc(size);
     memset(src, 0, size);
     memset(dst, 0, size);

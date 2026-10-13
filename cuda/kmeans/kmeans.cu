@@ -92,10 +92,10 @@
 #include <string.h>
 #include <unistd.h> // For getopt, read, and close functions
 #define WARMUP
-std::chrono::high_resolution_clock::time_point s_compute;
-std::chrono::high_resolution_clock::time_point e_compute;
-std::chrono::high_resolution_clock::time_point start_warmup;
-std::chrono::high_resolution_clock::time_point end_warmup;
+std::chrono::steady_clock::time_point s_compute;
+std::chrono::steady_clock::time_point e_compute;
+std::chrono::steady_clock::time_point start_warmup;
+std::chrono::steady_clock::time_point end_warmup;
 
 extern double wtime(void);
 
@@ -122,7 +122,7 @@ void usage(char *argv0) {
 
 /*---< main() >-------------------------------------------------------------*/
 int setup(int argc, char **argv) {
-  auto start_all = std::chrono::high_resolution_clock::now();
+  auto start_all = std::chrono::steady_clock::now();
   int opt;
   extern char *optarg;
   char *filename = 0;
@@ -271,17 +271,17 @@ int setup(int argc, char **argv) {
 
 /* ======================= core of the clustering ===================*/
 #ifdef WARMUP
-  start_warmup = std::chrono::high_resolution_clock::now();
+  start_warmup = std::chrono::steady_clock::now();
   // Warmup
   double *warm;
   cudaMalloc((void **)&warm, sizeof(double) * 100000);
   cudaStream_t stream;
   cudaStreamCreateWithFlags(&stream, cudaStreamNonBlocking);
   cudaFree(warm);
-  end_warmup = std::chrono::high_resolution_clock::now();
+  end_warmup = std::chrono::steady_clock::now();
 #endif
   // cluster_timing = omp_get_wtime();		/* Total clustering time */
-  s_compute = std::chrono::high_resolution_clock::now();
+  s_compute = std::chrono::steady_clock::now();
   cluster_centres = NULL;
   index = cluster(npoints,       /* number of data points */
                   nfeatures,     /* number of features for each point */
@@ -295,7 +295,7 @@ int setup(int argc, char **argv) {
                   nloops); /* number of iteration for each number of clusters */
 
   // cluster_timing = omp_get_wtime() - cluster_timing;
-  e_compute = std::chrono::high_resolution_clock::now();
+  e_compute = std::chrono::steady_clock::now();
   /* =============== Command Line Output =============== */
   std::chrono::duration<double, std::milli> compute_milli =
       e_compute - s_compute;
@@ -306,7 +306,7 @@ int setup(int argc, char **argv) {
   std::cerr << "Warmup time: " << elapsed_milli_warmup.count() << " ms"
             << std::endl;
 #endif
-  e_compute = std::chrono::high_resolution_clock::now();
+  e_compute = std::chrono::steady_clock::now();
 #ifdef OUTPUT
   if (min_nclusters == max_nclusters) {
     FILE *fp = fopen("result.txt", "w"); // Open the file for writing
@@ -359,7 +359,7 @@ int setup(int argc, char **argv) {
   /* free up memory */
   free(features[0]);
   free(features);
-  auto end_all = std::chrono::high_resolution_clock::now();
+  auto end_all = std::chrono::steady_clock::now();
   std::chrono::duration<double, std::milli> elapsed_milli = end_all - start_all;
   std::cerr << "Elapsed time: " << elapsed_milli.count() << " ms" << std::endl;
   return (0);

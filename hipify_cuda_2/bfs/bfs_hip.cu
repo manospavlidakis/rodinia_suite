@@ -27,24 +27,24 @@
 // #define BREAKDOWNS
 
 #ifdef BREAKDOWNS
-std::chrono::high_resolution_clock::time_point s_b0;
-std::chrono::high_resolution_clock::time_point e_b0;
-std::chrono::high_resolution_clock::time_point s_b1;
-std::chrono::high_resolution_clock::time_point e_b1;
-std::chrono::high_resolution_clock::time_point s_b2;
-std::chrono::high_resolution_clock::time_point e_b2;
-std::chrono::high_resolution_clock::time_point s_b3;
-std::chrono::high_resolution_clock::time_point e_b3;
-std::chrono::high_resolution_clock::time_point s_b4;
-std::chrono::high_resolution_clock::time_point e_b4;
+std::chrono::steady_clock::time_point s_b0;
+std::chrono::steady_clock::time_point e_b0;
+std::chrono::steady_clock::time_point s_b1;
+std::chrono::steady_clock::time_point e_b1;
+std::chrono::steady_clock::time_point s_b2;
+std::chrono::steady_clock::time_point e_b2;
+std::chrono::steady_clock::time_point s_b3;
+std::chrono::steady_clock::time_point e_b3;
+std::chrono::steady_clock::time_point s_b4;
+std::chrono::steady_clock::time_point e_b4;
 #endif
 // #define DEBUG
 #define MAX_THREADS_PER_BLOCK 512
 #define WARMUP
-std::chrono::high_resolution_clock::time_point s_compute;
-std::chrono::high_resolution_clock::time_point e_compute;
-std::chrono::high_resolution_clock::time_point start_warmup;
-std::chrono::high_resolution_clock::time_point end_warmup;
+std::chrono::steady_clock::time_point s_compute;
+std::chrono::steady_clock::time_point e_compute;
+std::chrono::steady_clock::time_point start_warmup;
+std::chrono::steady_clock::time_point end_warmup;
 int no_of_nodes;
 int edge_list_size;
 FILE *fp;
@@ -77,8 +77,8 @@ void Usage(int argc, char **argv) {
 // Apply BFS on a Graph using CUDA
 ////////////////////////////////////////////////////////////////////////////////
 void BFSGraph(int argc, char **argv) {
-  auto start_all = std::chrono::high_resolution_clock::now();
-  auto start_0 = std::chrono::high_resolution_clock::now();
+  auto start_all = std::chrono::steady_clock::now();
+  auto start_0 = std::chrono::steady_clock::now();
   char *input_f;
   if (argc != 2) {
     Usage(argc, argv);
@@ -150,21 +150,21 @@ void BFSGraph(int argc, char **argv) {
     h_cost[i] = -1;
   h_cost[source] = 0;
 
-  auto end_0 = std::chrono::high_resolution_clock::now();
+  auto end_0 = std::chrono::steady_clock::now();
 #ifdef WARMUP
-  start_warmup = std::chrono::high_resolution_clock::now();
+  start_warmup = std::chrono::steady_clock::now();
   // Warmup
   double *warm;
   HIP_CHECK(hipMalloc((void **)&warm, sizeof(double) * 100000));
   hipStream_t stream;
   HIP_CHECK(hipStreamCreateWithFlags(&stream, hipStreamNonBlocking));
   HIP_CHECK(hipFree(warm));
-  end_warmup = std::chrono::high_resolution_clock::now();
+  end_warmup = std::chrono::steady_clock::now();
 #endif
 
-  s_compute = std::chrono::high_resolution_clock::now();
+  s_compute = std::chrono::steady_clock::now();
 #ifdef BREAKDOWNS
-  s_b0 = std::chrono::high_resolution_clock::now();
+  s_b0 = std::chrono::steady_clock::now();
 #endif
   // Copy the Node list to device memory
   Node *d_graph_nodes;
@@ -194,8 +194,8 @@ void BFSGraph(int argc, char **argv) {
 
 #ifdef BREAKDOWNS
   HIP_CHECK(hipDeviceSynchronize());
-  e_b0 = std::chrono::high_resolution_clock::now();
-  s_b2 = std::chrono::high_resolution_clock::now();
+  e_b0 = std::chrono::steady_clock::now();
+  s_b2 = std::chrono::steady_clock::now();
 #endif
   HIP_CHECK(hipMemcpy(d_graph_nodes, h_graph_nodes, sizeof(Node) * no_of_nodes,
              hipMemcpyHostToDevice));
@@ -214,8 +214,8 @@ void BFSGraph(int argc, char **argv) {
 
   HIP_CHECK(hipMemcpy(d_cost, h_cost, sizeof(int) * no_of_nodes, hipMemcpyHostToDevice));
 #ifdef BREAKDOWNS
-  e_b2 = std::chrono::high_resolution_clock::now();
-  s_b1 = std::chrono::high_resolution_clock::now();
+  e_b2 = std::chrono::steady_clock::now();
+  s_b1 = std::chrono::steady_clock::now();
 #endif
   // setup execution parameters
   dim3 grid(num_of_blocks, 1, 1);
@@ -244,14 +244,14 @@ void BFSGraph(int argc, char **argv) {
   } while (stop);
 #ifdef BREAKDOWNS
   HIP_CHECK(hipDeviceSynchronize());
-  e_b1 = std::chrono::high_resolution_clock::now();
-  s_b3 = std::chrono::high_resolution_clock::now();
+  e_b1 = std::chrono::steady_clock::now();
+  s_b3 = std::chrono::steady_clock::now();
 #endif
   // copy result from device to host
   HIP_CHECK(hipMemcpy(h_cost, d_cost, sizeof(int) * no_of_nodes, hipMemcpyDeviceToHost));
 #ifdef BREAKDOWNS
-  e_b3 = std::chrono::high_resolution_clock::now();
-  s_b4 = std::chrono::high_resolution_clock::now();
+  e_b3 = std::chrono::steady_clock::now();
+  s_b4 = std::chrono::steady_clock::now();
 #endif
   HIP_CHECK(hipFree(d_graph_nodes));
   HIP_CHECK(hipFree(d_graph_edges));
@@ -261,10 +261,10 @@ void BFSGraph(int argc, char **argv) {
   HIP_CHECK(hipFree(d_cost));
   HIP_CHECK(hipFree(d_over));
 #ifdef BREAKDOWNS
-  HIP_CHECK(hipDeviceSynchronize());
-  e_b4 = std::chrono::high_resolution_clock::now();
+  e_b4 = std::chrono::steady_clock::now();
 #endif
-  e_compute = std::chrono::high_resolution_clock::now();
+  HIP_CHECK(hipDeviceSynchronize());
+  e_compute = std::chrono::steady_clock::now();
 #ifdef OUTPUT
   // Store the result into a file
   FILE *fpo = fopen("result.txt", "w");
@@ -281,7 +281,7 @@ void BFSGraph(int argc, char **argv) {
   free(h_updating_graph_mask);
   free(h_graph_visited);
   free(h_cost);
-  auto end_all = std::chrono::high_resolution_clock::now();
+  auto end_all = std::chrono::steady_clock::now();
   // std::chrono::duration<double, std::milli> elapsed_milli_0 = end_0 - start_0;
   // std::cerr << "Init time: " << elapsed_milli_0.count() << " ms" << std::endl;
   std::chrono::duration<double, std::milli> compute_milli = e_compute - s_compute;

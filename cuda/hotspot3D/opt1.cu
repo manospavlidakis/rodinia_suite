@@ -65,7 +65,7 @@ void hotspot_opt1(float *p, float *tIn, float *tOut,
 {
     float ce, cw, cn, cs, ct, cb, cc;
 #ifdef BREAKDOWNS
-    auto s_alloc = std::chrono::high_resolution_clock::now();
+    auto s_alloc = std::chrono::steady_clock::now();
     auto e_alloc = s_alloc;
     auto s_h2d = s_alloc;
     auto e_h2d = s_alloc;
@@ -86,23 +86,23 @@ void hotspot_opt1(float *p, float *tIn, float *tOut,
     size_t s = sizeof(float) * nx * ny * nz;
     float  *tIn_d, *tOut_d, *p_d;
 #ifdef BREAKDOWNS
-    s_alloc = std::chrono::high_resolution_clock::now();
+    s_alloc = std::chrono::steady_clock::now();
 #endif
     cudaMalloc((void**)&p_d,s);
     cudaMalloc((void**)&tIn_d,s);
     cudaMalloc((void**)&tOut_d,s);
 #ifdef BREAKDOWNS
-    e_alloc = std::chrono::high_resolution_clock::now();
-    s_h2d = std::chrono::high_resolution_clock::now();
+    e_alloc = std::chrono::steady_clock::now();
+    s_h2d = std::chrono::steady_clock::now();
 #endif
     cudaMemcpy(tIn_d, tIn, s, cudaMemcpyHostToDevice);
     cudaMemcpy(p_d, p, s, cudaMemcpyHostToDevice);
 #ifdef BREAKDOWNS
-    e_h2d = std::chrono::high_resolution_clock::now();
+    e_h2d = std::chrono::steady_clock::now();
 #endif
     cudaFuncSetCacheConfig(hotspotOpt1, cudaFuncCachePreferL1);
 #ifdef BREAKDOWNS
-    s_compute = std::chrono::high_resolution_clock::now();
+    s_compute = std::chrono::steady_clock::now();
 #endif
     dim3 block_dim(64, 4, 1);
     dim3 grid_dim(nx / 64, ny / 4, 1);
@@ -137,19 +137,20 @@ void hotspot_opt1(float *p, float *tIn, float *tOut,
 #endif
 #ifdef BREAKDOWNS
     cudaDeviceSynchronize();
-    e_compute = std::chrono::high_resolution_clock::now();
-    s_d2h = std::chrono::high_resolution_clock::now();
+    e_compute = std::chrono::steady_clock::now();
+    s_d2h = std::chrono::steady_clock::now();
 #endif
-    cudaMemcpy(tOut, tOut_d, s, cudaMemcpyDeviceToHost);
+    // After the last swap the newest field is in tIn_d (tOut_d holds step numiter-1).
+    cudaMemcpy(tOut, tIn_d, s, cudaMemcpyDeviceToHost);
 #ifdef BREAKDOWNS
-    e_d2h = std::chrono::high_resolution_clock::now();
-    s_free = std::chrono::high_resolution_clock::now();
+    e_d2h = std::chrono::steady_clock::now();
+    s_free = std::chrono::steady_clock::now();
 #endif
     cudaFree(p_d);
     cudaFree(tIn_d);
     cudaFree(tOut_d);
 #ifdef BREAKDOWNS
-    e_free = std::chrono::high_resolution_clock::now();
+    e_free = std::chrono::steady_clock::now();
     g_hotspot3d_alloc_ms = std::chrono::duration<double, std::milli>(e_alloc - s_alloc).count();
     g_hotspot3d_h2d_ms = std::chrono::duration<double, std::milli>(e_h2d - s_h2d).count();
     g_hotspot3d_compute_ms = std::chrono::duration<double, std::milli>(e_compute - s_compute).count();

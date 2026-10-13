@@ -11,34 +11,34 @@
 //#define BREAKDOWNS
 
 #ifdef BREAKDOWNS
-std::chrono::high_resolution_clock::time_point s_b0;
-std::chrono::high_resolution_clock::time_point e_b0;
-std::chrono::high_resolution_clock::time_point s_b1;
-std::chrono::high_resolution_clock::time_point e_b1;
-std::chrono::high_resolution_clock::time_point s_b2;
-std::chrono::high_resolution_clock::time_point e_b2;
-std::chrono::high_resolution_clock::time_point s_b3;
-std::chrono::high_resolution_clock::time_point e_b3;
-std::chrono::high_resolution_clock::time_point s_b4;
-std::chrono::high_resolution_clock::time_point e_b4;
-std::chrono::high_resolution_clock::time_point s_b5;
-std::chrono::high_resolution_clock::time_point e_b5;
-std::chrono::high_resolution_clock::time_point s_b6;
-std::chrono::high_resolution_clock::time_point e_b6;
-std::chrono::high_resolution_clock::time_point s_b7;
-std::chrono::high_resolution_clock::time_point e_b7;
-std::chrono::high_resolution_clock::time_point s_b8;
-std::chrono::high_resolution_clock::time_point e_b8;
-std::chrono::high_resolution_clock::time_point s_b9;
-std::chrono::high_resolution_clock::time_point e_b9;
+std::chrono::steady_clock::time_point s_b0;
+std::chrono::steady_clock::time_point e_b0;
+std::chrono::steady_clock::time_point s_b1;
+std::chrono::steady_clock::time_point e_b1;
+std::chrono::steady_clock::time_point s_b2;
+std::chrono::steady_clock::time_point e_b2;
+std::chrono::steady_clock::time_point s_b3;
+std::chrono::steady_clock::time_point e_b3;
+std::chrono::steady_clock::time_point s_b4;
+std::chrono::steady_clock::time_point e_b4;
+std::chrono::steady_clock::time_point s_b5;
+std::chrono::steady_clock::time_point e_b5;
+std::chrono::steady_clock::time_point s_b6;
+std::chrono::steady_clock::time_point e_b6;
+std::chrono::steady_clock::time_point s_b7;
+std::chrono::steady_clock::time_point e_b7;
+std::chrono::steady_clock::time_point s_b8;
+std::chrono::steady_clock::time_point e_b8;
+std::chrono::steady_clock::time_point s_b9;
+std::chrono::steady_clock::time_point e_b9;
 #endif
 // #define DEBUG
 #define MAX_THREADS_PER_BLOCK 512
 #define WARMUP
-std::chrono::high_resolution_clock::time_point s_compute;
-std::chrono::high_resolution_clock::time_point e_compute;
-std::chrono::high_resolution_clock::time_point start_warmup;
-std::chrono::high_resolution_clock::time_point end_warmup;
+std::chrono::steady_clock::time_point s_compute;
+std::chrono::steady_clock::time_point e_compute;
+std::chrono::steady_clock::time_point start_warmup;
+std::chrono::steady_clock::time_point end_warmup;
 /* Options*/
 #define GAMMA 1.4f
 #define iterations 2000
@@ -470,8 +470,8 @@ void time_step(int j, int nelr, float *old_variables, float *variables,
  * Main function
  */
 int main(int argc, char **argv) {
-  auto start_all = std::chrono::high_resolution_clock::now();
-  auto start_0 = std::chrono::high_resolution_clock::now();
+  auto start_all = std::chrono::steady_clock::now();
+  auto start_0 = std::chrono::steady_clock::now();
   if (argc < 2) {
     // std::cout << "specify data file name" << std::endl;
     return 0;
@@ -560,16 +560,16 @@ int main(int argc, char **argv) {
   float3 h_ff_flux_contribution_momentum_z;
   float3 h_ff_flux_contribution_density_energy;
   // Initialization ends here
-  auto end_0 = std::chrono::high_resolution_clock::now();
+  auto end_0 = std::chrono::steady_clock::now();
 #ifdef WARMUP
-  start_warmup = std::chrono::high_resolution_clock::now();
+  start_warmup = std::chrono::steady_clock::now();
   // Warmup
   double *warm;
   cudaMalloc((void **)&warm, sizeof(double) * 100000);
   cudaFree(warm);
-  end_warmup = std::chrono::high_resolution_clock::now();
+  end_warmup = std::chrono::steady_clock::now();
 #endif
-  s_compute = std::chrono::high_resolution_clock::now();
+  s_compute = std::chrono::steady_clock::now();
   // Host side function
   compute_flux_contribution(
       h_ff_variable[VAR_DENSITY], h_ff_momentum,
@@ -577,7 +577,7 @@ int main(int argc, char **argv) {
       h_ff_flux_contribution_momentum_x, h_ff_flux_contribution_momentum_y,
       h_ff_flux_contribution_momentum_z, h_ff_flux_contribution_density_energy);
 #ifdef BREAKDOWNS
-  s_b0 = std::chrono::high_resolution_clock::now();
+  s_b0 = std::chrono::steady_clock::now();
 #endif
   // copy far field conditions to the gpu
   checkCudaErrors(
@@ -597,8 +597,8 @@ int main(int argc, char **argv) {
                                      sizeof(float3)));
 #ifdef BREAKDOWNS
   cudaDeviceSynchronize();
-  e_b0 = std::chrono::high_resolution_clock::now(); // MemcpytoSymbol
-  s_b1 = std::chrono::high_resolution_clock::now(); //Malloc
+  e_b0 = std::chrono::steady_clock::now(); // MemcpytoSymbol
+  s_b1 = std::chrono::steady_clock::now(); //Malloc
 #endif
   areas = alloc<float>(nelr);
   elements_surrounding_elements = alloc<int>(nelr * NNB);
@@ -609,8 +609,8 @@ int main(int argc, char **argv) {
   variables = alloc<float>(nelr * NVAR);
 #ifdef BREAKDOWNS
   cudaDeviceSynchronize();
-  e_b1 = std::chrono::high_resolution_clock::now();
-  s_b2 = std::chrono::high_resolution_clock::now(); //Memcpy+Memset+initkernels
+  e_b1 = std::chrono::steady_clock::now();
+  s_b2 = std::chrono::steady_clock::now(); //Memcpy+Memset+initkernels
 #endif
   upload<float>(areas, h_areas, nelr);
   upload<int>(elements_surrounding_elements, h_elements_surrounding_elements, nelr * NNB);
@@ -623,8 +623,8 @@ int main(int argc, char **argv) {
   // make sure CUDA isn't still doing something before we start timing
   cudaDeviceSynchronize();
 #ifdef BREAKDOWNS
-  e_b2 = std::chrono::high_resolution_clock::now();
-  s_b3 = std::chrono::high_resolution_clock::now();
+  e_b2 = std::chrono::steady_clock::now();
+  s_b3 = std::chrono::steady_clock::now();
 #endif
   for (int i = 0; i < iterations; i++) {
     copy<float>(old_variables, variables, nelr * NVAR);
@@ -643,11 +643,11 @@ int main(int argc, char **argv) {
   }
   cudaDeviceSynchronize();
 #ifdef BREAKDOWNS
-  e_b3 = std::chrono::high_resolution_clock::now(); // computation
-  s_b4 = std::chrono::high_resolution_clock::now();
+  e_b3 = std::chrono::steady_clock::now(); // computation
+  s_b4 = std::chrono::steady_clock::now();
 #endif
 
-  e_compute = std::chrono::high_resolution_clock::now();
+  e_compute = std::chrono::steady_clock::now();
   MY_DEVICE_VERIFY_FLOAT_CUSTOM(variables, nelr * NVAR, 1.0e-07, 1);
   MY_DEVICE_VERIFY_FLOAT(old_variables, nelr * NVAR);
   MY_DEVICE_VERIFY_FLOAT_CUSTOM(fluxes, nelr * NVAR, 1.0e-05, 1);
@@ -658,8 +658,8 @@ int main(int argc, char **argv) {
   // std::cout << "Saving solution..." << std::endl;
   dump(variables, nel, nelr);
 #ifdef BREAKDOWNS
-  e_b4 = std::chrono::high_resolution_clock::now();
-  s_b5 = std::chrono::high_resolution_clock::now();
+  e_b4 = std::chrono::steady_clock::now();
+  s_b5 = std::chrono::steady_clock::now();
 #endif
   delete[] h_areas;
   delete[] h_elements_surrounding_elements;
@@ -675,9 +675,9 @@ int main(int argc, char **argv) {
   dealloc<float>(step_factors);
 #ifdef BREAKDOWNS
   cudaDeviceSynchronize();
-  e_b5 = std::chrono::high_resolution_clock::now(); // cleanup
+  e_b5 = std::chrono::steady_clock::now(); // cleanup
 #endif
-  auto end_all = std::chrono::high_resolution_clock::now();
+  auto end_all = std::chrono::steady_clock::now();
   // std::cout << "Done..." << std::endl;
   //std::chrono::duration<double, std::milli> elapsed_milli_0 = end_0 - start_0;
   //std::cerr << "Init time: " << elapsed_milli_0.count() << " ms" << std::endl;

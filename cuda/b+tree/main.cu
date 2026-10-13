@@ -11,12 +11,12 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-std::chrono::high_resolution_clock::time_point s_compute;
-std::chrono::high_resolution_clock::time_point e_compute;
-std::chrono::high_resolution_clock::time_point s_compute2;
-std::chrono::high_resolution_clock::time_point e_compute2;
-std::chrono::high_resolution_clock::time_point start_warmup;
-std::chrono::high_resolution_clock::time_point end_warmup;
+std::chrono::steady_clock::time_point s_compute;
+std::chrono::steady_clock::time_point e_compute;
+std::chrono::steady_clock::time_point s_compute2;
+std::chrono::steady_clock::time_point e_compute2;
+std::chrono::steady_clock::time_point start_warmup;
+std::chrono::steady_clock::time_point end_warmup;
 
 #define WARMUP
 // general variables
@@ -1505,17 +1505,30 @@ node *destroy_tree(node *root) {
   return NULL;
 }
 
+// Private PRNG for the query keys. glibc rand() is a process-wide stream that
+// the GPU runtime may reseed or consume (ROCm does), which made result.txt
+// differ per run. initstate_r(1) reproduces the default rand() sequence, so
+// nat_result.txt stays valid.
+static struct random_data bt_rand_data;
+static char bt_rand_state[128];
+static int bt_rand(void) {
+  int32_t r;
+  random_r(&bt_rand_data, &r);
+  return r;
+}
+
 int main(int argc, char **argv) {
-  auto start_all = std::chrono::high_resolution_clock::now();
+  initstate_r(1, bt_rand_state, sizeof(bt_rand_state), &bt_rand_data);
+  auto start_all = std::chrono::steady_clock::now();
 #ifdef WARMUP
-  start_warmup = std::chrono::high_resolution_clock::now();
+  start_warmup = std::chrono::steady_clock::now();
   // Warmup
   double *warm;
   cudaMalloc((void **)&warm, sizeof(double) * 100000);
   cudaStream_t stream;
   cudaStreamCreateWithFlags(&stream, cudaStreamNonBlocking);
   cudaFree(warm);
-  end_warmup = std::chrono::high_resolution_clock::now();
+  end_warmup = std::chrono::steady_clock::now();
 #endif
   // printf("WG size of kernel 1 & 2  = %d \n", DEFAULT_ORDER);
 
@@ -1767,7 +1780,7 @@ int main(int argc, char **argv) {
         // INPUT: keys CPU initialization
         int i;
         for (i = 0; i < count; i++) {
-          keys[i] = (rand() / (float)RAND_MAX) * size;
+          keys[i] = (bt_rand() / (float)RAND_MAX) * size;
         }
 
         // OUTPUT: ans CPU allocation
@@ -1777,13 +1790,13 @@ int main(int argc, char **argv) {
           ans[i].value = -1;
         }
         // printf("1. kernel_gpu_cuda_wrapper\n");
-        s_compute = std::chrono::high_resolution_clock::now();
+        s_compute = std::chrono::steady_clock::now();
         // CUDA kernel
         kernel_gpu_cuda_wrapper(records, records_mem, knodes, knodes_elem,
                                 knodes_mem,
                                 order, maxheight, count,
                                 currKnode, offset, keys, ans);
-        e_compute = std::chrono::high_resolution_clock::now();
+        e_compute = std::chrono::steady_clock::now();
         pFile = fopen(output, "aw+");
         if (pFile == NULL) {
           fprintf(stderr, "Fail to open %s!\n", output);
@@ -1882,7 +1895,7 @@ int main(int argc, char **argv) {
         // INPUT: start, end CPU initialization
         int i;
         for (i = 0; i < count; i++) {
-          start[i] = (rand() / (float)RAND_MAX) * size;
+          start[i] = (bt_rand() / (float)RAND_MAX) * size;
           end[i] = start[i] + rSize;
           if (end[i] >= size) {
             start[i] = start[i] - (end[i] - size);
@@ -1901,13 +1914,13 @@ int main(int argc, char **argv) {
           reclength[i] = 0;
         }
 
-        s_compute2 = std::chrono::high_resolution_clock::now();
+        s_compute2 = std::chrono::steady_clock::now();
         // CUDA kernel
         kernel_gpu_cuda_wrapper_2(knodes, knodes_elem, knodes_mem,
                                   order, maxheight, count,
                                   currKnode, offset, lastKnode, offset_2, start,
                                   end, recstart, reclength);
-        e_compute2 = std::chrono::high_resolution_clock::now();
+        e_compute2 = std::chrono::steady_clock::now();
         pFile = fopen(output, "aw+");
         if (pFile == NULL) {
           fprintf(stderr, "Fail to open %s!\n", output);
@@ -1947,7 +1960,7 @@ int main(int argc, char **argv) {
   cudaStreamDestroy(stream);
 #endif
 
-  auto end_all = std::chrono::high_resolution_clock::now();
+  auto end_all = std::chrono::steady_clock::now();
   std::chrono::duration<double, std::milli> compute_milli2 = e_compute2 - s_compute2;
   std::chrono::duration<double, std::milli> compute_milli =  e_compute - s_compute;
   std::cerr << "Computation: " << compute_milli.count() + compute_milli2.count() << " ms" << std::endl;
