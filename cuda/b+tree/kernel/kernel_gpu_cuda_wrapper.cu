@@ -1,3 +1,4 @@
+#include "../../../common/kernel_load.h"
 #ifdef BREAKDOWNS
 #include <chrono>
 #endif
@@ -110,3 +111,6 @@ void kernel_gpu_cuda_wrapper(record *records, long records_mem, knode *knodes,
 #ifdef __cplusplus
 }
 #endif
+
+// Load findK's GPU code before the timed region (see common/kernel_load.h).
+void kernel_gpu_cuda_wrapper_preload(void) { preload_kernels(findK); }

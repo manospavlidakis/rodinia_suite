@@ -1,3 +1,4 @@
+#include "../../../common/kernel_load.h"
 /// @file    fdwt53.cu
 /// @brief   CUDA implementation of forward 5/3 2D DWT.
 /// @author  Martin Jirman (207962@mail.muni.cz)
@@ -393,3 +394,9 @@ namespace dwt_cuda {
   
 
 } // end of namespace dwt_cuda
+
+// Load the forward 5/3 kernels' GPU code before the timed region (see common/kernel_load.h).
+void preloadFdwt53Kernels() {
+  preload_kernels(dwt_cuda::fdwt53Kernel<192, 8>, dwt_cuda::fdwt53Kernel<128, 8>,
+                  dwt_cuda::fdwt53Kernel<64, 8>);
+}

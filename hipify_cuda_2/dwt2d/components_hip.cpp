@@ -1,3 +1,4 @@
+#include "../../common/kernel_load.h"
 /*
  * Copyright (c) 2009, Jiri Matela
  * All rights reserved.
@@ -191,3 +192,8 @@ void bwToComponent(T *d_c, unsigned char * src, int width, int height)
 
 template void bwToComponent<float>(float *d_c, unsigned char *src, int width, int height);
 template void bwToComponent<int>(int *d_c, unsigned char *src, int width, int height);
+
+// Load the component kernels' GPU code before the timed region (see common/kernel_load.h).
+void preloadComponentsKernels() {
+  preload_kernels(c_CopySrcToComponents<int>, c_CopySrcToComponent<int>);
+}

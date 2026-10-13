@@ -16,6 +16,7 @@
   Created by Pawan Harish.
  ************************************************************************************/
 #include <chrono>
+#include "../../common/kernel_load.h"
 #include <cuda.h>
 #include <iostream>
 #include <math.h>
@@ -159,6 +160,9 @@ void BFSGraph(int argc, char **argv) {
   cudaStreamCreateWithFlags(&stream, cudaStreamNonBlocking);
   cudaFree(warm);
   end_warmup = std::chrono::steady_clock::now();
+  auto kernel_load = kernel_load_start();
+  preload_kernels(Kernel, Kernel2);
+  kernel_load_print(kernel_load);
 #endif
 
   s_compute = std::chrono::steady_clock::now();

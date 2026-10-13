@@ -1,5 +1,6 @@
 
 #include <hip/hip_runtime.h>
+#include "../../common/kernel_load.h"
 #include "./common.h"
 #include "../../common/util.h"
 #include "../../common/helper_hip.h"
@@ -1534,6 +1535,10 @@ int main(int argc, char **argv) {
   HIP_CHECK(hipStreamCreateWithFlags(&stream, hipStreamNonBlocking));
   HIP_CHECK(hipFree(warm));
   end_warmup = std::chrono::steady_clock::now();
+  auto kernel_load = kernel_load_start();
+  kernel_gpu_cuda_wrapper_preload();
+  kernel_gpu_cuda_wrapper_2_preload();
+  kernel_load_print(kernel_load);
 #endif
   // printf("WG size of kernel 1 & 2  = %d \n", DEFAULT_ORDER);
 

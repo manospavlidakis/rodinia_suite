@@ -17,6 +17,8 @@ extern double g_btree2_d2h_ms;
 extern double g_btree2_free_ms;
 #endif
 
+void kernel_gpu_cuda_wrapper_2_preload(void);
+
 #ifdef __cplusplus
 }
 #endif

@@ -1,5 +1,6 @@
 #define LIMIT -999
 #include "needle.h"
+#include "../../common/kernel_load.h"
 #include <chrono>
 #include <cuda.h>
 #include <iostream>
@@ -188,6 +189,9 @@ void runTest(int argc, char **argv) {
   cudaStreamCreateWithFlags(&stream, cudaStreamNonBlocking);
   cudaFree(warm);
   end_warmup = std::chrono::steady_clock::now();
+  auto kernel_load = kernel_load_start();
+  preload_kernels(needle_cuda_shared_1, needle_cuda_shared_2);
+  kernel_load_print(kernel_load);
 #endif
   s_compute = std::chrono::steady_clock::now();
 #ifdef BREAKDOWNS

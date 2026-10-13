@@ -9,6 +9,8 @@ void kernel_gpu_cuda_wrapper(	par_str parms_cpu,
 								fp* qv_cpu,
 								FOUR_VECTOR* fv_cpu);
 
+void kernel_gpu_cuda_wrapper_preload(void);
+
 #ifdef __cplusplus
 }
 #endif

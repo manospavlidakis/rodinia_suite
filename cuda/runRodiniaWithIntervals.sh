@@ -127,11 +127,15 @@ fi
 
 per_iter_csv="${base}_per_iteration.csv"
 summary_csv="${base}_summary.csv"
+# One-time kernel load (common/kernel_load.h), measured outside Computation
+load_iter_csv="${base}_kernel_load_per_iteration.csv"
+load_summary_csv="${base}_kernel_load_summary.csv"
 
 break_iter_csv="${base}_breakdowns_per_iteration.csv"
 break_summary_csv="${base}_breakdowns_summary.csv"
 
 echo "iteration,benchmark,avg_ms,min_ms,max_ms,median_ms,iqr_ms,std_dev_ms" > "${per_iter_csv}"
+echo "iteration,benchmark,avg_ms,median_ms" > "${load_iter_csv}"
 verify_csv="${base}_verify.csv"
 [[ "${VERIFY}" == "1" ]] && echo "iteration,benchmark,run_rc,verify" > "${verify_csv}"
 if [[ "${DO_BREAKDOWNS}" == "1" ]]; then
@@ -227,6 +231,10 @@ for ((iter=1; iter<=RUNS; iter++)); do
     echo "[   MEDIAN GPU time ] ${median_val:-NA} ms"
     echo "[   IQR GPU time    ] ${iqr_val:-NA} ms"
     echo "[   STDDEV GPU time ] ${stddev_val:-NA} ms"
+    load_avg="$(extract_metric_ms "average.csv" "Kernel load time")"
+    load_med="$(extract_metric_ms "median.csv" "Kernel load time")"
+    echo "[   AVG KERNEL LOAD ] ${load_avg:-NA} ms"
+    echo "${iter},${b},${load_avg},${load_med}" >> "${load_iter_csv}"
 
     echo "${iter},${b},${avg_val},${min_val},${max_val},${median_val},${iqr_val},${stddev_val}" >> "${per_iter_csv}"  # CHANGED: store all stats per iteration
     if [[ "${DO_BREAKDOWNS}" == "1" ]]; then
@@ -352,3 +360,9 @@ if [[ "${DO_BREAKDOWNS}" == "1" ]]; then
   echo "[ BREAK ITER CSV    ] ${break_iter_csv}"
   echo "[ BREAK SUMMARY CSV ] ${break_summary_csv}"
 fi
+
+# Kernel load summary: average of the per-iteration averages and medians
+awk -F',' 'NR>1 && $3!="" {n[$2]++; a[$2]+=$3; m[$2]+=$4}
+  END {print "benchmark,avg_ms,median_ms,samples"; for (b in n) printf "%s,%.2f,%.2f,%d\n", b, a[b]/n[b], m[b]/n[b], n[b]}' \
+  "${load_iter_csv}" > "${load_summary_csv}"
+echo "[ KERNEL LOAD       ] ${load_summary_csv}"

@@ -2,6 +2,7 @@
 
 // includes, system
 #include <chrono>
+#include "../../common/kernel_load.h"
 #include <hip/hip_runtime.h>
 #include <fstream>
 #include <iostream>
@@ -102,6 +103,9 @@ extern "C" void bpnn_train_cuda(BPNN *net, float *eo, float *eh) {
   HIP_CHECK(hipStreamCreateWithFlags(&stream, hipStreamNonBlocking));
   HIP_CHECK(hipFree(warm));
   end_warmup = std::chrono::steady_clock::now();
+  auto kernel_load = kernel_load_start();
+  preload_kernels(bpnn_layerforward_CUDA, bpnn_adjust_weights_cuda);
+  kernel_load_print(kernel_load);
 #endif
 
   s_compute = std::chrono::steady_clock::now();

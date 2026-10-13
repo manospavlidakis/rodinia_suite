@@ -1,4 +1,5 @@
 #include "./main.h"
+#include "../../common/kernel_load.h"
 #include "cuda.h"
 #include "kernel/kernel_gpu_cuda_wrapper.h"
 #include <chrono>
@@ -195,6 +196,9 @@ int main(int argc, char *argv[]) {
   cudaStreamCreateWithFlags(&stream, cudaStreamNonBlocking);
   cudaFree(warm);
   end_warmup = std::chrono::steady_clock::now();
+  auto kernel_load = kernel_load_start();
+  kernel_gpu_cuda_wrapper_preload();
+  kernel_load_print(kernel_load);
 #endif
   s_compute = std::chrono::steady_clock::now();
 

@@ -5,6 +5,7 @@
 #include <stdio.h>
 #include <vector>
 #include "../../common/util.h"
+#include "../../common/kernel_load.h"
 #include "../../common/helper_hip.h"
 #define min(a, b) a > b ? b : a
 #define ceilDiv(a, b) (a + b - 1) / b
@@ -110,6 +111,9 @@ int main(int argc, char *argv[]) {
   HIP_CHECK(hipStreamCreateWithFlags(&stream, hipStreamNonBlocking));
   HIP_CHECK(hipFree(warm));
   end_warmup = std::chrono::steady_clock::now();
+  auto kernel_load = kernel_load_start();
+  preload_kernels(euclid);
+  kernel_load_print(kernel_load);
 #endif
   s_compute = std::chrono::steady_clock::now();
   // Pointers to host memory

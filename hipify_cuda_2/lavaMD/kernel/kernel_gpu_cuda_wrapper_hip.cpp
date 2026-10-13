@@ -1,3 +1,4 @@
+#include "../../../common/kernel_load.h"
 #include <chrono>
 #include <hip/hip_runtime.h>
 #include <iostream>
@@ -209,3 +210,6 @@ void kernel_gpu_cuda_wrapper(par_str par_cpu, dim_str dim_cpu, box_str *box_cpu,
   std::cerr << " #################################" << std::endl;
 #endif
 }
+
+// Load kernel_gpu_cuda's GPU code before the timed region (see common/kernel_load.h).
+void kernel_gpu_cuda_wrapper_preload(void) { preload_kernels(kernel_gpu_cuda); }

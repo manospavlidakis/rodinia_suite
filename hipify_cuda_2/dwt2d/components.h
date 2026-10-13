@@ -35,4 +35,6 @@ void rgbToComponents(T *d_r, T *d_g, T *d_b, unsigned char * src, int width, int
 template<typename T>
 void bwToComponent(T *d_c, unsigned char * src, int width, int height);
 
+void preloadComponentsKernels();
+
 #endif

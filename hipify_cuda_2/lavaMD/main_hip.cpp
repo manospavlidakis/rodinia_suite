@@ -1,4 +1,5 @@
 #include "./main.h"
+#include "../../common/kernel_load.h"
 #include "hip/hip_runtime.h"
 #include "kernel/kernel_gpu_cuda_wrapper.h"
 #include "../../common/helper_hip.h"
@@ -196,6 +197,9 @@ int main(int argc, char *argv[]) {
   HIP_CHECK(hipStreamCreateWithFlags(&stream, hipStreamNonBlocking));
   HIP_CHECK(hipFree(warm));
   end_warmup = std::chrono::steady_clock::now();
+  auto kernel_load = kernel_load_start();
+  kernel_gpu_cuda_wrapper_preload();
+  kernel_load_print(kernel_load);
 #endif
   s_compute = std::chrono::steady_clock::now();
 

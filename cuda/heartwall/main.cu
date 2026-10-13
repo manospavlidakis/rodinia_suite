@@ -1,4 +1,5 @@
 #include <avilib.h>
+#include "../../common/kernel_load.h"
 #include <avimod.h>
 #include <chrono>
 #include <cuda.h>
@@ -129,6 +130,9 @@ int main(int argc, char *argv[]) {
   cudaStreamCreateWithFlags(&stream, cudaStreamNonBlocking);
   cudaFree(warm);
   end_warmup = std::chrono::steady_clock::now();
+  auto kernel_load = kernel_load_start();
+  preload_kernels(kernel);
+  kernel_load_print(kernel_load);
 #endif
 
   frames_processed = atoi(argv[2]);

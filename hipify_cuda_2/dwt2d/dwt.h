@@ -37,4 +37,6 @@ template<typename T>
 int writeLinear(T *component_cuda, int width, int height, 
                      const char * filename, const char * suffix);
 
+void preloadFdwt53Kernels();
+
 #endif

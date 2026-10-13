@@ -4,6 +4,7 @@
 // #include <cutil.h>
 
 #include <hip/hip_runtime.h>
+#include "../../common/kernel_load.h"
 #include "../../common/helper_hip.h"
 #include "../../common/my_verification.h"
 #include <chrono>
@@ -571,6 +572,10 @@ int main(int argc, char **argv) {
   HIP_CHECK(hipMalloc((void **)&warm, sizeof(double) * 100000));
   HIP_CHECK(hipFree(warm));
   end_warmup = std::chrono::steady_clock::now();
+  auto kernel_load = kernel_load_start();
+  preload_kernels(cuda_initialize_variables, cuda_compute_step_factor,
+                  cuda_compute_flux, cuda_time_step);
+  kernel_load_print(kernel_load);
 #endif
   s_compute = std::chrono::steady_clock::now();
   // Host side function

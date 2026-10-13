@@ -14,6 +14,7 @@
  */
 
 #include "comparison_helpers.h"
+#include "../../common/kernel_load.h"
 #include "cpuencode.h"
 #include "cuda_helpers.h"
 #include "load_data.h"
@@ -78,6 +79,9 @@ void runVLCTest(char *file_name, uint num_block_threads, uint num_blocks) {
   cudaStreamCreateWithFlags(&stream, cudaStreamNonBlocking);
   cudaFree(warm);
   end_warmup = std::chrono::steady_clock::now();
+  auto kernel_load = kernel_load_start();
+  preload_kernels(vlc_encode_kernel_sm64huff, histo_kernel);
+  kernel_load_print(kernel_load);
 #endif
   unsigned int
       num_elements;      // uint num_elements = num_blocks * num_block_threads;

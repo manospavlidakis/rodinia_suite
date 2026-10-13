@@ -26,6 +26,7 @@
 
 
 #include <hip/hip_runtime.h>
+#include "../../common/kernel_load.h"
 #include "common.h"
 #include "components.h"
 #include "dwt.h"
@@ -139,6 +140,10 @@ void processDWT(struct dwt *d, int forward, int writeVisual) {
   HIP_CHECK(hipStreamCreateWithFlags(&stream, hipStreamNonBlocking));
   HIP_CHECK(hipFree(warm));
   end_warmup = std::chrono::steady_clock::now();
+  auto kernel_load = kernel_load_start();
+  preloadComponentsKernels();
+  preloadFdwt53Kernels();
+  kernel_load_print(kernel_load);
 #endif
   s_compute = std::chrono::steady_clock::now();
   T *c_r_out, *backup;

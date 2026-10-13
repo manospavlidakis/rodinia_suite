@@ -1,4 +1,5 @@
 #include <assert.h>
+#include "../../common/kernel_load.h"
 #include <chrono>
 #include <iostream>
 #include <stdio.h>
@@ -353,6 +354,9 @@ void run(int argc, char **argv) {
   cudaStreamCreateWithFlags(&stream, cudaStreamNonBlocking);
   cudaFree(warm);
   end_warmup = std::chrono::steady_clock::now();
+  auto kernel_load = kernel_load_start();
+  preload_kernels(calculate_temp);
+  kernel_load_print(kernel_load);
 #endif
   s_compute = std::chrono::steady_clock::now();
   float *MatrixTemp[2], *MatrixPower;

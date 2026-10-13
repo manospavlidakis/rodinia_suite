@@ -1,4 +1,5 @@
 #include "./common.h"
+#include "../../common/kernel_load.h"
 #include "../../common/util.h"
 #include "./kernel/kernel_gpu_cuda_wrapper.h"
 #include "./kernel/kernel_gpu_cuda_wrapper_2.h"
@@ -1529,6 +1530,10 @@ int main(int argc, char **argv) {
   cudaStreamCreateWithFlags(&stream, cudaStreamNonBlocking);
   cudaFree(warm);
   end_warmup = std::chrono::steady_clock::now();
+  auto kernel_load = kernel_load_start();
+  kernel_gpu_cuda_wrapper_preload();
+  kernel_gpu_cuda_wrapper_2_preload();
+  kernel_load_print(kernel_load);
 #endif
   // printf("WG size of kernel 1 & 2  = %d \n", DEFAULT_ORDER);
 

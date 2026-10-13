@@ -26,7 +26,8 @@ if not csv_files:
     sys.exit(1)
 
 # Initialize a dictionary to collect values for each metric
-data = {"Init time": [], "Computation": [], "Elapsed time": [], "Warmup time": []}
+data = {"Init time": [], "Computation": [], "Elapsed time": [], "Warmup time": [],
+        "Kernel load time": []}
 
 # Process each CSV file for the specified benchmark
 for file in csv_files:
