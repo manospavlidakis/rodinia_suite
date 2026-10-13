@@ -137,7 +137,8 @@ __global__ void vlc_encode_kernel_sm64huff(unsigned int* data,
 	/*Part 2*/
 	if (codewordlen) {
 	wrbits		= codewordlen > 32 ? 32: codewordlen;
-	tmpcw32		= (unsigned int)(cw64>>(codewordlen - wrbits)) & ((1<<wrbits)-1);
+	// wrbits may be 32: 1<<32 is undefined (AMD/clang turns it into poison), so build the mask without it
+	tmpcw32		= (unsigned int)(cw64>>(codewordlen - wrbits)) & (wrbits >= 32 ? 0xFFFFFFFFu : ((1u<<wrbits)-1u));
 	//if (wrbits == 32) as[kc+1] = tmpcw32;
 	//else
 	atomicOr(&as[kc+1], tmpcw32<<(32-wrbits));
@@ -146,7 +147,7 @@ __global__ void vlc_encode_kernel_sm64huff(unsigned int* data,
 
 	/*Part 3*/
 	if (codewordlen) {
-	tmpcw32		= (unsigned int)(cw64 & ((1<<codewordlen)-1));
+	tmpcw32		= (unsigned int)(cw64 & ((1u<<codewordlen)-1u));
 	//if (wrbits == 32) as[kc+2] = tmpcw32;
 	//else
 	atomicOr(&as[kc+2], tmpcw32<<(32-codewordlen));
